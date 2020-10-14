@@ -1,3 +1,3 @@
-# WasmI32Transformer
+# WasmTransformer
 
 A description of this package.

@@ -1,12 +1,12 @@
 import XCTest
-@testable import WasmI32Transformer
+@testable import WasmTransformer
 
-final class WasmI32TransformerTests: XCTestCase {
+final class WasmTransformerTests: XCTestCase {
     func testExample() {
         // This is an example of a functional test case.
         // Use XCTAssert and related functions to verify your tests produce the correct
         // results.
-        XCTAssertEqual(WasmI32Transformer().text, "Hello, World!")
+        XCTAssertEqual(WasmTransformer().text, "Hello, World!")
     }
 
     static var allTests = [

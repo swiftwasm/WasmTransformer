@@ -1,7 +1,7 @@
 import XCTest
 
-import WasmI32TransformerTests
+import WasmTransformerTests
 
 var tests = [XCTestCaseEntry]()
-tests += WasmI32TransformerTests.allTests()
+tests += WasmTransformerTests.allTests()
 XCTMain(tests)

@@ -14,17 +14,5 @@ class IntegrationTests: XCTestCase {
         var inputStream = try InputStream(from: binaryPath)
         let writer = InMemoryOutputWriter()
         try transformer.transform(&inputStream, writer: writer)
-
-        let (url, handle) = makeTemporaryFile()
-        handle.write(Data(writer.bytes))
-        print(url)
-        let vm = JSVirtualMachine()!
-        let context = JSContext(virtualMachine: vm)!
-        let script = """
-        
-        """
-        context.evaluateScript(<#T##script: String!##String!#>)
-
-        runWasm(url)
     }
 }

@@ -1,16 +1,16 @@
-struct InputStream {
+public struct InputStream {
     private(set) var offset: Int
     let bytes: ArraySlice<UInt8>
     var isEOF: Bool {
         offset >= bytes.endIndex
     }
 
-    init(bytes: ArraySlice<UInt8>) {
+    public init(bytes: ArraySlice<UInt8>) {
         self.bytes = bytes
         self.offset = bytes.startIndex
     }
 
-    init(bytes: [UInt8]) {
+    public init(bytes: [UInt8]) {
         self.init(bytes: bytes[...])
     }
 
@@ -35,22 +35,6 @@ struct InputStream {
     mutating func consumeULEB128<T>(_: T.Type) where T: UnsignedInteger, T: FixedWidthInteger {
         let (_, advanced) = decodeULEB128(bytes[offset...], T.self)
         offset += advanced
-    }
-
-    mutating func readUInt32() -> UInt32 {
-        let bytes = read(4)
-        return UInt32(bytes[bytes.startIndex + 0])
-            + (UInt32(bytes[bytes.startIndex + 1]) << 8)
-            + (UInt32(bytes[bytes.startIndex + 2]) << 16)
-            + (UInt32(bytes[bytes.startIndex + 3]) << 24)
-    }
-
-    mutating func readString() -> String {
-        let length = Int(readVarUInt32())
-        let bytes = self.bytes[offset ..< offset + length]
-        let name = String(decoding: bytes, as: Unicode.ASCII.self)
-        offset += length
-        return name
     }
 
     enum Error: Swift.Error {

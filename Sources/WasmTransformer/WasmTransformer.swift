@@ -3,24 +3,22 @@ typealias RawSection = (
 )
 
 
-class InMemoryOutputWriter: OutputWriter {
-    private(set) var bytes: [UInt8] = []
+public class InMemoryOutputWriter: OutputWriter {
+    private(set) var _bytes: [UInt8] = []
     
-    init(reservingCapacity capacity: Int = 0) {
-        bytes.reserveCapacity(capacity)
+    public init(reservingCapacity capacity: Int = 0) {
+        _bytes.reserveCapacity(capacity)
     }
 
-    func writeByte(_ byte: UInt8) throws {
-        bytes.append(byte)
+    public func writeByte(_ byte: UInt8) throws {
+        _bytes.append(byte)
     }
     
-    func writeBytes<S>(_ newBytes: S) throws where S : Sequence, S.Element == UInt8 {
-        bytes.append(contentsOf: newBytes)
+    public func writeBytes<S>(_ newBytes: S) throws where S : Sequence, S.Element == UInt8 {
+        _bytes.append(contentsOf: newBytes)
     }
 
-    func writeString(_ value: String) throws {
-        bytes.append(contentsOf: value.utf8)
-    }
+    public func bytes() -> [UInt8] { _bytes }
 }
 
 struct TypeSection {
@@ -151,13 +149,12 @@ struct FunctionSection {
     var input: InputStream
 }
 
-protocol OutputWriter {
+public protocol OutputWriter {
     func writeByte(_ byte: UInt8) throws
     func writeBytes<S: Sequence>(_ bytes: S) throws where S.Element == UInt8
-    func writeString(_ string: String) throws
 }
 
-class I64Transformer {
+public struct I64Transformer {
     enum Error: Swift.Error {
         case invalidExternalKind(UInt8)
         case expectTypeSection
@@ -165,8 +162,10 @@ class I64Transformer {
         case expectEnd
         case unexpectedSection(UInt8)
     }
+    
+    public init() {}
 
-    func transform<Writer: OutputWriter>(_ input: inout InputStream, writer: Writer) throws {
+    public func transform<Writer: OutputWriter>(_ input: inout InputStream, writer: Writer) throws {
         let maybeMagic = input.read(4)
         assert(maybeMagic.elementsEqual(magic))
         try writer.writeBytes(magic)
@@ -326,8 +325,8 @@ func writeSection<T>(_ type: SectionType, writer: OutputWriter, bodyWriter: (Out
     try writer.writeByte(type.rawValue)
     let buffer = InMemoryOutputWriter()
     let result = try bodyWriter(buffer)
-    try writer.writeBytes(encodeULEB128(UInt32(buffer.bytes.count)))
-    try writer.writeBytes(buffer.bytes)
+    try writer.writeBytes(encodeULEB128(UInt32(buffer._bytes.count)))
+    try writer.writeBytes(buffer._bytes)
     return result
 }
 

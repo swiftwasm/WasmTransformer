@@ -9,7 +9,7 @@ func transformWat(_ input: String) throws -> URL {
     try transformer.transform(&inputStream, writer: writer)
 
     let (url, handle) = makeTemporaryFile()
-    handle.write(Data(writer.bytes))
+    handle.write(Data(writer.bytes()))
     return url
 }
 

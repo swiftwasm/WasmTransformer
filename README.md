@@ -1,4 +1,4 @@
-# wasm-transformer
+# WasmTransformer
 
 ![Test](https://github.com/swiftwasm/swift-wasm-transformer/workflows/Test/badge.svg)
 

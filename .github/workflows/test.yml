@@ -2,12 +2,9 @@ name: Test
 on: [push]
 
 jobs:
-  unit-tests:
+  build-fixture:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Select Xcode toolchain
-        run: sudo xcode-select -s /Applications/Xcode_12.2.0.app/Contents/Developer/
       - name: Install SwiftWasm toolchain
         run: |
           VERSION=swift-wasm-5.3-SNAPSHOT-2020-10-13-a
@@ -21,6 +18,21 @@ jobs:
           npm run build
           make build/main.wasm
         working-directory: Fixtures
+      - uses: actions/upload-artifact@v2
+        with:
+          name: test-fixtures
+          path: Fixtures/build
+
+  unit-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: test-fixtures
+          path: Fixtures/build
+      - name: Select Xcode toolchain
+        run: sudo xcode-select -s /Applications/Xcode_12.2.0.app/Contents/Developer/
       - name: Run unit tests
         run: swift test
 
@@ -28,4 +40,13 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: mxschmitt/action-tmate@v3
+      - uses: actions/download-artifact@v2
+        with:
+          name: test-fixtures
+          path: Fixtures/build
+      - name: Select Xcode toolchain
+        run: sudo xcode-select -s /Applications/Xcode_12.2.0.app/Contents/Developer/
+      - name: Install dependencies
+        run: pip3 install selenium
+      - run: swift test IntegrationTests
+        working-directory: IntegrationTests

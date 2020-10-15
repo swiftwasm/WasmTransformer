@@ -69,6 +69,25 @@ struct Trampoline {
     let fromSignature: FuncSignature
     let toSignature: FuncSignature
     let toSignatureIndex: Int
+    let originalFuncIndex: Int
+    
+    func write(to writer: OutputWriter) throws {
+        var bodyBuffer: [UInt8] = []
+        bodyBuffer.append(0x00) // local decl count
+
+        for (index, param) in fromSignature.params.enumerated() {
+            bodyBuffer.append(contentsOf: Opcode.localGet(UInt32(index)).bytes())
+            if param == .i64 {
+                bodyBuffer.append(contentsOf: Opcode.i32WrapI64.bytes())
+            }
+        }
+
+        bodyBuffer.append(contentsOf: Opcode.call(UInt32(originalFuncIndex)).bytes())
+        bodyBuffer.append(contentsOf: Opcode.end.bytes())
+        
+        try writer.writeBytes(encodeULEB128(UInt32(bodyBuffer.count)))
+        try writer.writeBytes(bodyBuffer)
+    }
 }
 
 struct Trampolines: Sequence {
@@ -77,7 +96,9 @@ struct Trampolines: Sequence {
     var count: Int { trampolineByBaseFuncIndex.count }
 
     mutating func add(importIndex: Int, from: FuncSignature, to: FuncSignature, toIndex: Int) {
-        let trampoline = Trampoline(fromSignature: from, toSignature: to, toSignatureIndex: toIndex)
+        let trampoline = Trampoline(fromSignature: from,
+                                    toSignature: to, toSignatureIndex: toIndex,
+                                    originalFuncIndex: importIndex)
         trampolineByBaseFuncIndex[importIndex] = (trampoline, trampolines.count)
         trampolines.append(trampoline)
     }
@@ -103,7 +124,6 @@ protocol OutputWriter {
 
 class I64Transformer {
     enum Error: Swift.Error {
-        case invalidValueType(UInt8)
         case invalidExternalKind(UInt8)
         case expectTypeSection
         case expectFunctionSection
@@ -190,7 +210,15 @@ class I64Transformer {
                     trampolines: trampolines, originalFuncCount: originalFuncCount
                 )
             case .code:
-                break
+                // Phase 5. Read Code section and rewrite i64 function calls with trampoline function call.
+                //          And add trampoline functions at the tail
+                guard let originalFuncCount = originalFuncCount else {
+                    throw Error.expectFunctionSection
+                }
+                try transformCodeSection(
+                    input: &input, writer: writer,
+                    trampolines: trampolines, originalFuncCount: originalFuncCount
+                )
             case .custom, .table, .memory, .global, .export, .start:
                 // FIXME: Support re-export of imported i64 functions
                 try writer.writeBytes(input.bytes[offset..<contentStart + size])
@@ -201,53 +229,13 @@ class I64Transformer {
             assert(input.offset == contentStart + size)
         }
     }
-    
-    func transformCodeSection(input: inout InputStream, writer: OutputWriter, trampolines: Trampolines) throws {
-        
-    }
-    
-    /// Read Elem section and rewrite i64 functions with trampoline functions.
-    func transformElemSection(input: inout InputStream, writer: OutputWriter,
-                              trampolines: Trampolines, originalFuncCount: Int) throws {
-        let count = input.readVarUInt32()
-        for _ in 0..<count {
-            let tableIndex = input.readVarUInt32()
-            try writer.writeBytes(encodeULEB128(tableIndex))
-            try input.consumeI32InitExpr(consumer: writer.writeBytes)
-            let funcIndicesCount = Int(input.readVarUInt32())
-            for _ in 0 ..< funcIndicesCount {
-                let funcIndex = Int(input.readVarUInt32())
-                if let (_, index) = trampolines.trampoline(byBaseFuncIndex: funcIndex) {
-                    try writer.writeBytes(encodeULEB128(UInt32(index + originalFuncCount)))
-                }
-            }
-        }
-    }
-
-    /// Write out Func section and add trampoline signatures.
-    func transformFunctionSection(input: inout InputStream, writer: OutputWriter, trampolines: Trampolines) throws -> Int {
-        let count = Int(input.readVarUInt32())
-        let newCount = count + trampolines.count
-        try writer.writeBytes(encodeULEB128(UInt32(newCount)))
-
-        for _ in 0..<count {
-            let typeIndex = input.readVarUInt32()
-            try writer.writeBytes(encodeULEB128(typeIndex))
-        }
-
-        for trampoline in trampolines {
-            let index = UInt32(trampoline.toSignatureIndex)
-            try writer.writeBytes(encodeULEB128(index))
-        }
-        return count
-    }
 
     /// Returns indices of types that contains i64 in its signature
     func scan(typeSection: inout TypeSection, from input: inout InputStream) throws {
         let count = input.readVarUInt32()
         for _ in 0..<count {
-            let (params, paramsHasI64) = try readResultTypes(&input)
-            let (results, resultsHasI64) = try readResultTypes(&input)
+            let (params, paramsHasI64) = try input.readResultTypes()
+            let (results, resultsHasI64) = try input.readResultTypes()
             let hasI64 = paramsHasI64 || resultsHasI64
             typeSection.signatures.append(FuncSignature(params: params, results: results, hasI64: hasI64))
         }
@@ -289,21 +277,75 @@ class I64Transformer {
             }
         }
     }
+}
 
-    /// https://webassembly.github.io/spec/core/binary/types.html#result-types
-    func readResultTypes(_ input: inout InputStream) throws -> (types: [ValueType], hasI64: Bool) {
-        let count = input.readVarUInt32()
-        var resultTypes: [ValueType] = []
-        var hasI64: Bool = false
-        for _ in 0..<count {
-            let rawType = input.readUInt8()
-            guard let type = ValueType(rawValue: rawType) else {
-                throw Error.invalidValueType(rawType)
+
+func transformCodeSection(input: inout InputStream, writer: OutputWriter,
+                          trampolines: Trampolines, originalFuncCount: Int) throws {
+    let count = input.readVarUInt32()
+    for _ in 0..<count {
+        let oldSize = Int(input.readVarUInt32())
+        let bodyEnd = input.offset + oldSize
+        var bodyBuffer: [UInt8] = []
+        bodyBuffer.reserveCapacity(oldSize)
+
+        try input.consumeLocals(consumer: {
+            bodyBuffer.append(contentsOf: $0)
+        })
+
+        while (input.offset < bodyEnd) {
+            let opcode = try input.readOpcode()
+            guard case let .call(funcIndex) = opcode,
+                  let (_, trampolineIndex) = trampolines.trampoline(byBaseFuncIndex: Int(funcIndex)) else {
+                bodyBuffer.append(contentsOf: opcode.bytes())
+                continue
             }
-            hasI64 = hasI64 || (type == ValueType.i64)
-            resultTypes.append(type)
+            let newTargetIndex = originalFuncCount + trampolineIndex
+            let callInst = Opcode.call(UInt32(newTargetIndex))
+            bodyBuffer.append(contentsOf: callInst.bytes())
         }
-        return (resultTypes, hasI64)
+        let newSize = bodyBuffer.count
+        try writer.writeBytes(encodeULEB128(UInt32(newSize)))
+        try writer.writeBytes(bodyBuffer)
+    }
+    
+    for trampoline in trampolines {
+        try trampoline.write(to: writer)
     }
 }
 
+/// Read Elem section and rewrite i64 functions with trampoline functions.
+func transformElemSection(input: inout InputStream, writer: OutputWriter,
+                          trampolines: Trampolines, originalFuncCount: Int) throws {
+    let count = input.readVarUInt32()
+    for _ in 0..<count {
+        let tableIndex = input.readVarUInt32()
+        try writer.writeBytes(encodeULEB128(tableIndex))
+        try input.consumeI32InitExpr(consumer: writer.writeBytes)
+        let funcIndicesCount = Int(input.readVarUInt32())
+        for _ in 0 ..< funcIndicesCount {
+            let funcIndex = Int(input.readVarUInt32())
+            if let (_, index) = trampolines.trampoline(byBaseFuncIndex: funcIndex) {
+                try writer.writeBytes(encodeULEB128(UInt32(index + originalFuncCount)))
+            }
+        }
+    }
+}
+
+/// Write out Func section and add trampoline signatures.
+func transformFunctionSection(input: inout InputStream, writer: OutputWriter, trampolines: Trampolines) throws -> Int {
+    let count = Int(input.readVarUInt32())
+    let newCount = count + trampolines.count
+    try writer.writeBytes(encodeULEB128(UInt32(newCount)))
+
+    for _ in 0..<count {
+        let typeIndex = input.readVarUInt32()
+        try writer.writeBytes(encodeULEB128(typeIndex))
+    }
+
+    for trampoline in trampolines {
+        let index = UInt32(trampoline.toSignatureIndex)
+        try writer.writeBytes(encodeULEB128(index))
+    }
+    return count
+}

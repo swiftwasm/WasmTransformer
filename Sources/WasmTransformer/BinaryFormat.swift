@@ -40,8 +40,24 @@ enum ConstOpcode: UInt8 {
     case f64Const = 0x44
 }
 
-enum Opcode: UInt8 {
-    case end = 0x0B
+enum Opcode: Equatable {
+    case call(UInt32)
+    case end
+    case localGet(UInt32)
+    case i32WrapI64
+    case unknown([UInt8])
+    
+    func bytes() -> [UInt8] {
+        switch self {
+        case .call(let funcIndex):
+            return [0x10] + encodeULEB128(funcIndex)
+        case .end: return [0x0B]
+        case .localGet(let localIndex):
+            return [0x20] + encodeULEB128(localIndex)
+        case .i32WrapI64: return [0xA7]
+        case .unknown(let bytes): return bytes
+        }
+    }
 }
 
 struct FuncSignature {

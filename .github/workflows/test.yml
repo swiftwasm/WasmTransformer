@@ -11,7 +11,7 @@ jobs:
           VERSION=swift-wasm-5.3-SNAPSHOT-2020-10-13-a
           TOOLCHAIN_URL="https://github.com/swiftwasm/swift/releases/download/$VERSION/$VERSION-macos-x86_64.tar.gz"
           wget $TOOLCHAIN_URL
-          tar xfz $VERSION-macos-x86_64.tar.gz.tar.gz
+          tar xfz $VERSION-macos-x86_64.tar.gz
           echo "SWIFT_TOOLCHAIN=$PWD/$VERSION/usr" >> $GITHUB_ENV 
       - name: Setup fixtures
         run: |

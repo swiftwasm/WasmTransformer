@@ -6,11 +6,11 @@ let package = Package(
     name: "IntegrationTests",
     dependencies: [
         .package(url: "https://github.com/pvieito/PythonKit.git", .revision("b6513c3")),
-        .package(name: "wasm-transformer", path: "../"),
+        .package(name: "WasmTransformer", path: "../"),
     ],
     targets: [
         .target(
             name: "IntegrationTests",
-            dependencies: [.product(name: "WasmTransformer", package: "wasm-transformer"), "PythonKit"]),
+            dependencies: ["WasmTransformer", "PythonKit"]),
     ]
 )

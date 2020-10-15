@@ -11,6 +11,6 @@ let package = Package(
     targets: [
         .target(
             name: "IntegrationTests",
-            dependencies: ["WasmTransformer", "PythonKit"]),
+            dependencies: [.product(name: "WasmTransformer", package: "wasm-transformer"), "PythonKit"]),
     ]
 )

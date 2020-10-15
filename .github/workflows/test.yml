@@ -35,6 +35,8 @@ jobs:
           path: Fixtures/build
       - name: Select Xcode toolchain
         run: sudo xcode-select -s /Applications/Xcode_12.2.0.app/Contents/Developer/
+      - name: Install dependencies
+        run: brew install wabt
       - name: Run unit tests
         run: swift test
 
@@ -50,7 +52,9 @@ jobs:
       - name: Select Xcode toolchain
         run: sudo xcode-select -s /Applications/Xcode_12.2.0.app/Contents/Developer/
       - name: Install dependencies
-        run: pip3 install selenium
+        run: |
+          brew uninstall $(brew list | grep python) --ignore-dependencies
+          pip3 install selenium
       - uses: mxschmitt/action-tmate@v3
       - run: swift run IntegrationTests
         working-directory: IntegrationTests

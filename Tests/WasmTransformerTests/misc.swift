@@ -10,8 +10,8 @@ func exec(_ launchPath: String, _ arguments: [String]) -> String? {
     process.launch()
     process.waitUntilExit()
     assert(process.terminationStatus == 0)
-    guard let stdoutData = try? stdoutPipe.fileHandleForReading.readToEnd(),
-          let stdout = String(data: stdoutData, encoding: .utf8) else {
+    let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+    guard let stdout = String(data: stdoutData, encoding: .utf8) else {
         return nil
     }
     return stdout

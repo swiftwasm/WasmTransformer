@@ -1,14 +1,13 @@
 struct InputStream {
-    private(set) var offset: Int = 0
+    private(set) var offset: Int
     let bytes: ArraySlice<UInt8>
-    let length: Int
     var isEOF: Bool {
-        offset >= length
+        offset >= bytes.endIndex
     }
 
     init(bytes: ArraySlice<UInt8>) {
         self.bytes = bytes
-        length = bytes.count
+        self.offset = bytes.startIndex
     }
 
     init(bytes: [UInt8]) {

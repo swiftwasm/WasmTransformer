@@ -2,19 +2,47 @@ typealias RawSection = (
     startOffset: Int, endOffset: Int
 )
 
+
+class InMemoryOutputWriter: OutputWriter {
+    private(set) var bytes: [UInt8] = []
+    
+    init(reservingCapacity capacity: Int = 0) {
+        bytes.reserveCapacity(capacity)
+    }
+
+    func writeByte(_ byte: UInt8) throws {
+        bytes.append(byte)
+    }
+    
+    func writeBytes<S>(_ newBytes: S) throws where S : Sequence, S.Element == UInt8 {
+        bytes.append(contentsOf: newBytes)
+    }
+
+    func writeString(_ value: String) throws {
+        bytes.append(contentsOf: value.utf8)
+    }
+}
+
 struct TypeSection {
-    var signatures: [FuncSignature] = []
-    var sectionSize: Int = 0
+    private(set) var signatures: [FuncSignature] = []
 
     func write<Writer: OutputWriter>(to writer: Writer) throws {
         try writer.writeByte(SectionType.type.rawValue)
-        try writer.writeBytes(encodeULEB128(UInt32(sectionSize)))
-
-        try writer.writeBytes(encodeULEB128(UInt32(signatures.count)))
+        
+        let buffer = InMemoryOutputWriter()
+        try buffer.writeBytes(encodeULEB128(UInt32(signatures.count)))
         for signature in signatures {
-            try writeResultTypes(signature.params, to: writer)
-            try writeResultTypes(signature.results, to: writer)
+            try buffer.writeByte(0x60)
+            try writeResultTypes(signature.params, to: buffer)
+            try writeResultTypes(signature.results, to: buffer)
         }
+        
+        try writer.writeBytes(encodeULEB128(UInt32(buffer.bytes.count)))
+        try writer.writeBytes(buffer.bytes)
+    }
+    
+    mutating func append(signature: FuncSignature) {
+        signatures.append(signature)
     }
 
     /// https://webassembly.github.io/spec/core/binary/types.html#result-types
@@ -33,13 +61,21 @@ struct ImportSection {
     var replacements: [ImportFuncReplacement] = []
 
     mutating func write<Writer: OutputWriter>(to writer: Writer) throws {
+        let sectionType = input.readUInt8()
+        assert(SectionType(rawValue: sectionType) == .import)
+        try writer.writeByte(sectionType)
+
+        let oldContentSize = input.readVarUInt32()
+        var contentBuffer: [UInt8] = []
+        contentBuffer.reserveCapacity(Int(oldContentSize))
+
         let count = input.readVarUInt32()
-        try writer.writeBytes(encodeULEB128(count))
+        contentBuffer.append(contentsOf: encodeULEB128(count))
         for index in 0 ..< count {
-            try input.consumeString(consumer: writer.writeBytes) // module name
-            try input.consumeString(consumer: writer.writeBytes) // field name
+            input.consumeString(consumer: { contentBuffer.append(contentsOf: $0) }) // module name
+            input.consumeString(consumer: { contentBuffer.append(contentsOf: $0) }) // field name
             let rawKind = input.readUInt8()
-            try writer.writeByte(rawKind)
+            contentBuffer.append(rawKind)
             let kind = ExternalKind(rawValue: rawKind)
 
             switch kind {
@@ -51,16 +87,19 @@ struct ImportSection {
                 } else {
                     newSignatureIndex = oldSignatureIndex
                 }
-                try writer.writeBytes(encodeULEB128(newSignatureIndex))
-            case .table: try input.consumeTable(consumer: writer.writeBytes)
-            case .memory: try input.consumeMemory(consumer: writer.writeBytes)
-            case .global: try input.consumeGlobalHeader(consumer: writer.writeBytes)
+                contentBuffer.append(contentsOf: encodeULEB128(newSignatureIndex))
+            case .table: input.consumeTable(consumer: { contentBuffer.append(contentsOf: $0) })
+            case .memory: input.consumeMemory(consumer: { contentBuffer.append(contentsOf: $0) })
+            case .global: input.consumeGlobalHeader(consumer: { contentBuffer.append(contentsOf: $0) })
             case .except:
                 fatalError("not supported yet")
             case .none:
                 fatalError()
             }
         }
+        
+        try writer.writeBytes(encodeULEB128(UInt32(contentBuffer.count)))
+        try writer.writeBytes(contentBuffer)
     }
 }
 
@@ -155,11 +194,10 @@ class I64Transformer {
 
                 switch sectionType {
                 case .type:
-                    typeSection.sectionSize = size
                     try scan(typeSection: &typeSection, from: &input)
                 case .import:
                     let partialStart = input.bytes.startIndex + offset
-                    let partialEnd = partialStart + size
+                    let partialEnd = contentStart + size
                     let partialBytes = input.bytes[partialStart ..< partialEnd]
                     var section = ImportSection(input: InputStream(bytes: partialBytes))
                     try scan(importSection: &section, from: &input,
@@ -234,10 +272,11 @@ class I64Transformer {
     func scan(typeSection: inout TypeSection, from input: inout InputStream) throws {
         let count = input.readVarUInt32()
         for _ in 0 ..< count {
+            assert(input.readUInt8() == 0x60)
             let (params, paramsHasI64) = try input.readResultTypes()
             let (results, resultsHasI64) = try input.readResultTypes()
             let hasI64 = paramsHasI64 || resultsHasI64
-            typeSection.signatures.append(FuncSignature(params: params, results: results, hasI64: hasI64))
+            typeSection.append(signature: FuncSignature(params: params, results: results, hasI64: hasI64))
         }
     }
 
@@ -261,7 +300,7 @@ class I64Transformer {
 
                 let toTypeIndex = typeSection.signatures.count
                 let toSignature = signature.lowered()
-                typeSection.signatures.append(toSignature)
+                typeSection.append(signature: toSignature)
                 importSection.replacements.append(
                     (index: Int(index), toTypeIndex: toTypeIndex)
                 )

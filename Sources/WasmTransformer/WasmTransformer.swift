@@ -5,11 +5,11 @@ typealias RawSection = (
 struct TypeSection {
     var signatures: [FuncSignature] = []
     var sectionSize: Int = 0
-    
+
     func write<Writer: OutputWriter>(to writer: Writer) throws {
         try writer.writeByte(SectionType.type.rawValue)
         try writer.writeBytes(encodeULEB128(UInt32(sectionSize)))
-        
+
         try writer.writeBytes(encodeULEB128(UInt32(signatures.count)))
         for signature in signatures {
             try writeResultTypes(signature.params, to: writer)
@@ -35,7 +35,7 @@ struct ImportSection {
     mutating func write<Writer: OutputWriter>(to writer: Writer) throws {
         let count = input.readVarUInt32()
         try writer.writeBytes(encodeULEB128(count))
-        for index in 0..<count {
+        for index in 0 ..< count {
             try input.consumeString(consumer: writer.writeBytes) // module name
             try input.consumeString(consumer: writer.writeBytes) // field name
             let rawKind = input.readUInt8()
@@ -52,8 +52,7 @@ struct ImportSection {
                     newSignatureIndex = oldSignatureIndex
                 }
                 try writer.writeBytes(encodeULEB128(newSignatureIndex))
-                break
-            case .table:  try input.consumeTable(consumer: writer.writeBytes)
+            case .table: try input.consumeTable(consumer: writer.writeBytes)
             case .memory: try input.consumeMemory(consumer: writer.writeBytes)
             case .global: try input.consumeGlobalHeader(consumer: writer.writeBytes)
             case .except:
@@ -70,7 +69,7 @@ struct Trampoline {
     let toSignature: FuncSignature
     let toSignatureIndex: Int
     let originalFuncIndex: Int
-    
+
     func write(to writer: OutputWriter) throws {
         var bodyBuffer: [UInt8] = []
         bodyBuffer.append(0x00) // local decl count
@@ -84,7 +83,7 @@ struct Trampoline {
 
         bodyBuffer.append(contentsOf: Opcode.call(UInt32(originalFuncIndex)).bytes())
         bodyBuffer.append(contentsOf: Opcode.end.bytes())
-        
+
         try writer.writeBytes(encodeULEB128(UInt32(bodyBuffer.count)))
         try writer.writeBytes(bodyBuffer)
     }
@@ -102,6 +101,7 @@ struct Trampolines: Sequence {
         trampolineByBaseFuncIndex[importIndex] = (trampoline, trampolines.count)
         trampolines.append(trampoline)
     }
+
     func trampoline(byBaseFuncIndex index: Int) -> (Trampoline, Int)? {
         trampolineByBaseFuncIndex[index]
     }
@@ -160,7 +160,7 @@ class I64Transformer {
                 case .import:
                     let partialStart = input.bytes.startIndex + offset
                     let partialEnd = partialStart + size
-                    let partialBytes = input.bytes[partialStart..<partialEnd]
+                    let partialBytes = input.bytes[partialStart ..< partialEnd]
                     var section = ImportSection(input: InputStream(bytes: partialBytes))
                     try scan(importSection: &section, from: &input,
                              typeSection: &typeSection, trampolines: &trampolines)
@@ -182,10 +182,10 @@ class I64Transformer {
             }
 
             for rawSection in rawSections {
-                try writer.writeBytes(input.bytes[rawSection.startOffset..<rawSection.endOffset])
+                try writer.writeBytes(input.bytes[rawSection.startOffset ..< rawSection.endOffset])
             }
         }
-        
+
         var originalFuncCount: Int?
         while !input.isEOF {
             let offset = input.offset
@@ -193,7 +193,7 @@ class I64Transformer {
             let size = Int(input.readVarUInt32())
             let contentStart = input.offset
             let sectionType = SectionType(rawValue: type)
-            
+
             switch sectionType {
             case .type, .import:
                 fatalError("unreachable")
@@ -221,7 +221,7 @@ class I64Transformer {
                 )
             case .custom, .table, .memory, .global, .export, .start:
                 // FIXME: Support re-export of imported i64 functions
-                try writer.writeBytes(input.bytes[offset..<contentStart + size])
+                try writer.writeBytes(input.bytes[offset ..< contentStart + size])
                 input.read(size)
             case .none:
                 throw Error.unexpectedSection(type)
@@ -233,7 +233,7 @@ class I64Transformer {
     /// Returns indices of types that contains i64 in its signature
     func scan(typeSection: inout TypeSection, from input: inout InputStream) throws {
         let count = input.readVarUInt32()
-        for _ in 0..<count {
+        for _ in 0 ..< count {
             let (params, paramsHasI64) = try input.readResultTypes()
             let (results, resultsHasI64) = try input.readResultTypes()
             let hasI64 = paramsHasI64 || resultsHasI64
@@ -243,15 +243,16 @@ class I64Transformer {
 
     /// https://webassembly.github.io/spec/core/binary/modules.html#import-section
     func scan(importSection: inout ImportSection, from input: inout InputStream,
-              typeSection: inout TypeSection, trampolines: inout Trampolines) throws {
+              typeSection: inout TypeSection, trampolines: inout Trampolines) throws
+    {
         let count = input.readVarUInt32()
         var importFuncCount = 0
-        for index in 0..<count {
+        for index in 0 ..< count {
             input.consumeString() // module name
             input.consumeString() // field name
             let rawKind = input.readUInt8()
             let kind = ExternalKind(rawValue: rawKind)
-            
+
             switch kind {
             case .func:
                 let signatureIndex = Int(input.readVarUInt32())
@@ -279,11 +280,11 @@ class I64Transformer {
     }
 }
 
-
 func transformCodeSection(input: inout InputStream, writer: OutputWriter,
-                          trampolines: Trampolines, originalFuncCount: Int) throws {
+                          trampolines: Trampolines, originalFuncCount: Int) throws
+{
     let count = input.readVarUInt32()
-    for _ in 0..<count {
+    for _ in 0 ..< count {
         let oldSize = Int(input.readVarUInt32())
         let bodyEnd = input.offset + oldSize
         var bodyBuffer: [UInt8] = []
@@ -293,10 +294,11 @@ func transformCodeSection(input: inout InputStream, writer: OutputWriter,
             bodyBuffer.append(contentsOf: $0)
         })
 
-        while (input.offset < bodyEnd) {
+        while input.offset < bodyEnd {
             let opcode = try input.readOpcode()
             guard case let .call(funcIndex) = opcode,
-                  let (_, trampolineIndex) = trampolines.trampoline(byBaseFuncIndex: Int(funcIndex)) else {
+                let (_, trampolineIndex) = trampolines.trampoline(byBaseFuncIndex: Int(funcIndex))
+            else {
                 bodyBuffer.append(contentsOf: opcode.bytes())
                 continue
             }
@@ -308,7 +310,7 @@ func transformCodeSection(input: inout InputStream, writer: OutputWriter,
         try writer.writeBytes(encodeULEB128(UInt32(newSize)))
         try writer.writeBytes(bodyBuffer)
     }
-    
+
     for trampoline in trampolines {
         try trampoline.write(to: writer)
     }
@@ -316,9 +318,10 @@ func transformCodeSection(input: inout InputStream, writer: OutputWriter,
 
 /// Read Elem section and rewrite i64 functions with trampoline functions.
 func transformElemSection(input: inout InputStream, writer: OutputWriter,
-                          trampolines: Trampolines, originalFuncCount: Int) throws {
+                          trampolines: Trampolines, originalFuncCount: Int) throws
+{
     let count = input.readVarUInt32()
-    for _ in 0..<count {
+    for _ in 0 ..< count {
         let tableIndex = input.readVarUInt32()
         try writer.writeBytes(encodeULEB128(tableIndex))
         try input.consumeI32InitExpr(consumer: writer.writeBytes)
@@ -338,7 +341,7 @@ func transformFunctionSection(input: inout InputStream, writer: OutputWriter, tr
     let newCount = count + trampolines.count
     try writer.writeBytes(encodeULEB128(UInt32(newCount)))
 
-    for _ in 0..<count {
+    for _ in 0 ..< count {
         let typeIndex = input.readVarUInt32()
         try writer.writeBytes(encodeULEB128(typeIndex))
     }

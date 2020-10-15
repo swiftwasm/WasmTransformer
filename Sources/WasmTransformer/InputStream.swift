@@ -10,6 +10,7 @@ struct InputStream {
         self.bytes = bytes
         length = bytes.count
     }
+
     init(bytes: [UInt8]) {
         self.init(bytes: bytes[...])
     }
@@ -53,7 +54,6 @@ struct InputStream {
         return name
     }
 
-    
     enum Error: Swift.Error {
         case invalidValueType(UInt8)
         case expectConstOpcode(UInt8)
@@ -67,7 +67,7 @@ struct InputStream {
         let count = readVarUInt32()
         var resultTypes: [ValueType] = []
         var hasI64: Bool = false
-        for _ in 0..<count {
+        for _ in 0 ..< count {
             let rawType = readUInt8()
             guard let type = ValueType(rawValue: rawType) else {
                 throw Error.invalidValueType(rawType)
@@ -84,9 +84,9 @@ struct InputStream {
         let start = offset
         let length = Int(readVarUInt32())
         offset += length
-        try consumer?(bytes[start..<offset])
+        try consumer?(bytes[start ..< offset])
     }
-    
+
     /// https://webassembly.github.io/spec/core/binary/types.html#table-types
     mutating func consumeTable(consumer: Consumer? = nil) rethrows {
         let start = offset
@@ -96,7 +96,7 @@ struct InputStream {
         if hasMax {
             _ = readVarUInt32() // max
         }
-        try consumer?(bytes[start..<offset])
+        try consumer?(bytes[start ..< offset])
     }
 
     /// https://webassembly.github.io/spec/core/binary/types.html#memory-types
@@ -108,7 +108,7 @@ struct InputStream {
         if hasMax {
             _ = readVarUInt32() // max
         }
-        try consumer?(bytes[start..<offset])
+        try consumer?(bytes[start ..< offset])
     }
 
     /// https://webassembly.github.io/spec/core/binary/types.html#global-types
@@ -116,7 +116,7 @@ struct InputStream {
         let start = offset
         _ = readUInt8() // value type
         _ = readUInt8() // mutable
-        try consumer?(bytes[start..<offset])
+        try consumer?(bytes[start ..< offset])
     }
 
     mutating func consumeI32InitExpr(consumer: Consumer? = nil) throws {
@@ -135,18 +135,17 @@ struct InputStream {
         guard opcode == .end else {
             throw Error.expectEnd
         }
-        try consumer?(bytes[start..<offset])
+        try consumer?(bytes[start ..< offset])
     }
-    
 
     /// https://webassembly.github.io/spec/core/binary/modules.html#binary-local
     mutating func consumeLocals(consumer: Consumer? = nil) throws {
         let start = offset
         _ = readVarUInt32()
         _ = readUInt8()
-        try consumer?(bytes[start..<offset])
+        try consumer?(bytes[start ..< offset])
     }
-    
+
     mutating func consumeBlockType() {
         let head = bytes[offset]
         let length: Int
@@ -163,12 +162,12 @@ struct InputStream {
 
     mutating func consumeBrTable() {
         let count = readVarUInt32()
-        for _ in 0..<count {
+        for _ in 0 ..< count {
             _ = readVarUInt32()
         }
         _ = readVarUInt32()
     }
-    
+
     mutating func consumeMemoryArg() {
         _ = readVarUInt32()
         _ = readVarUInt32()
@@ -179,15 +178,14 @@ struct InputStream {
         let rawCode = readUInt8()
         var code: Opcode?
         switch rawCode {
-
         // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
         case 0x00, 0x01: break
         case 0x02, 0x03, 0x04: consumeBlockType()
         case 0x05: break
-        case 0x0b: code = .end
-        case 0x0c, 0x0d: _ = readVarUInt32() // label index
-        case 0x0e: consumeBrTable()
-        case 0x0f: break
+        case 0x0B: code = .end
+        case 0x0C, 0x0D: _ = readVarUInt32() // label index
+        case 0x0E: consumeBrTable()
+        case 0x0F: break
         case 0x10:
             let funcIndex = readVarUInt32()
             code = .call(funcIndex)
@@ -200,18 +198,18 @@ struct InputStream {
 
         // https://webassembly.github.io/spec/core/binary/instructions.html#variable-instructions
         case 0x20: code = .localGet(readVarUInt32())
-        case 0x21...0x24: _ = readVarUInt32() // local index
+        case 0x21 ... 0x24: _ = readVarUInt32() // local index
 
         // https://webassembly.github.io/spec/core/binary/instructions.html#memory-instructions
-        case 0x28...0x3E: consumeMemoryArg()
+        case 0x28 ... 0x3E: consumeMemoryArg()
         case 0x3F, 0x40: _ = readUInt8() // 0x00
 
         // https://webassembly.github.io/spec/core/binary/instructions.html#numeric-instructions
         case 0x41, 0x43: consumeULEB128(UInt32.self)
         case 0x42, 0x44: consumeULEB128(UInt64.self)
-        case 0x45...0xA6: break
+        case 0x45 ... 0xA6: break
         case 0xA7: code = .i32WrapI64
-        case 0xA8...0xC4: break
+        case 0xA8 ... 0xC4: break
         case 0xFC: _ = readVarUInt32()
         default:
             throw Error.unexpectedOpcode(rawCode)
@@ -219,7 +217,7 @@ struct InputStream {
         if let code = code {
             return code
         } else {
-            return .unknown(Array(bytes[start..<offset]))
+            return .unknown(Array(bytes[start ..< offset]))
         }
     }
 }

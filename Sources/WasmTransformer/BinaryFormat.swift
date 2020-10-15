@@ -46,16 +46,16 @@ enum Opcode: Equatable {
     case localGet(UInt32)
     case i32WrapI64
     case unknown([UInt8])
-    
+
     func bytes() -> [UInt8] {
         switch self {
-        case .call(let funcIndex):
+        case let .call(funcIndex):
             return [0x10] + encodeULEB128(funcIndex)
         case .end: return [0x0B]
-        case .localGet(let localIndex):
+        case let .localGet(localIndex):
             return [0x20] + encodeULEB128(localIndex)
         case .i32WrapI64: return [0xA7]
-        case .unknown(let bytes): return bytes
+        case let .unknown(bytes): return bytes
         }
     }
 }
@@ -64,7 +64,7 @@ struct FuncSignature {
     let params: [ValueType]
     let results: [ValueType]
     let hasI64: Bool
-    
+
     func lowered() -> FuncSignature {
         func transform(_ type: ValueType) -> ValueType {
             if case .i64 = type { return .i32 }

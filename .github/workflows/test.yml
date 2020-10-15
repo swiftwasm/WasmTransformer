@@ -54,6 +54,6 @@ jobs:
       - name: Install dependencies
         run: |
           brew uninstall $(brew list | grep python) --ignore-dependencies
-          pip3 install selenium
+          sudo pip3 install selenium
       - run: swift run IntegrationTests
         working-directory: IntegrationTests

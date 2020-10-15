@@ -5,6 +5,7 @@ jobs:
   build-fixture:
     runs-on: macos-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Install SwiftWasm toolchain
         run: |
           VERSION=swift-wasm-5.3-SNAPSHOT-2020-10-13-a

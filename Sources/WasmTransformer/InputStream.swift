@@ -140,8 +140,11 @@ struct InputStream {
     /// https://webassembly.github.io/spec/core/binary/modules.html#binary-local
     mutating func consumeLocals(consumer: Consumer? = nil) throws {
         let start = offset
-        _ = readVarUInt32()
-        _ = readUInt8()
+        let count = readVarUInt32()
+        for _ in 0..<count {
+            _ = readVarUInt32() // n
+            _ = readUInt8() // value type
+        }
         try consumer?(bytes[start ..< offset])
     }
 
@@ -204,8 +207,10 @@ struct InputStream {
         case 0x3F, 0x40: _ = readUInt8() // 0x00
 
         // https://webassembly.github.io/spec/core/binary/instructions.html#numeric-instructions
-        case 0x41, 0x43: consumeULEB128(UInt32.self)
-        case 0x42, 0x44: consumeULEB128(UInt64.self)
+        case 0x41: consumeULEB128(UInt32.self)
+        case 0x42: consumeULEB128(UInt64.self)
+        case 0x43: _ = read(4)
+        case 0x44: _ = read(8)
         case 0x45 ... 0xA6: break
         case 0xA7: code = .i32WrapI64
         case 0xA8 ... 0xC4: break

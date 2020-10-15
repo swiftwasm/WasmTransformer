@@ -102,7 +102,7 @@ struct ImportSection {
 struct Trampoline {
     let fromSignature: FuncSignature
     let toSignature: FuncSignature
-    let toSignatureIndex: Int
+    let fromSignatureIndex: Int
     let originalFuncIndex: Int
 
     func write(to writer: OutputWriter) throws {
@@ -129,9 +129,9 @@ struct Trampolines: Sequence {
     private var trampolines: [Trampoline] = []
     var count: Int { trampolineByBaseFuncIndex.count }
 
-    mutating func add(importIndex: Int, from: FuncSignature, to: FuncSignature, toIndex: Int) {
+    mutating func add(importIndex: Int, from: FuncSignature, fromIndex: Int, to: FuncSignature) {
         let trampoline = Trampoline(fromSignature: from,
-                                    toSignature: to, toSignatureIndex: toIndex,
+                                    toSignature: to, fromSignatureIndex: fromIndex,
                                     originalFuncIndex: importIndex)
         trampolineByBaseFuncIndex[importIndex] = (trampoline, trampolines.count)
         trampolines.append(trampoline)
@@ -256,7 +256,7 @@ class I64Transformer {
                     input: &input, writer: writer,
                     trampolines: trampolines, originalFuncCount: originalFuncCount
                 )
-            case .custom, .table, .memory, .global, .export, .start:
+            case .custom, .table, .memory, .global, .export, .start, .data, .dataCount:
                 // FIXME: Support re-export of imported i64 functions
                 try writer.writeBytes(input.bytes[offset ..< contentStart + size])
                 input.read(size)
@@ -296,6 +296,7 @@ class I64Transformer {
             case .func:
                 let signatureIndex = Int(input.readVarUInt32())
                 let signature = typeSection.signatures[signatureIndex]
+                defer { importFuncCount += 1 }
                 guard signature.hasI64 else { continue }
 
                 let toTypeIndex = typeSection.signatures.count
@@ -304,9 +305,10 @@ class I64Transformer {
                 importSection.replacements.append(
                     (index: Int(index), toTypeIndex: toTypeIndex)
                 )
-                trampolines.add(importIndex: importFuncCount, from: signature,
-                                to: toSignature, toIndex: toTypeIndex)
-                importFuncCount += 1
+                trampolines.add(
+                    importIndex: importFuncCount, from: signature,
+                    fromIndex: signatureIndex, to: toSignature
+                )
             case .table: input.consumeTable()
             case .memory: input.consumeMemory()
             case .global: input.consumeGlobalHeader()
@@ -373,16 +375,22 @@ func transformCodeSection(input: inout InputStream, writer: OutputWriter,
 func transformElemSection(input: inout InputStream, writer: OutputWriter,
                           trampolines: Trampolines, originalFuncCount: Int) throws
 {
-    let count = input.readVarUInt32()
-    for _ in 0 ..< count {
-        let tableIndex = input.readVarUInt32()
-        try writer.writeBytes(encodeULEB128(tableIndex))
-        try input.consumeI32InitExpr(consumer: writer.writeBytes)
-        let funcIndicesCount = Int(input.readVarUInt32())
-        for _ in 0 ..< funcIndicesCount {
-            let funcIndex = Int(input.readVarUInt32())
-            if let (_, index) = trampolines.trampoline(byBaseFuncIndex: funcIndex) {
-                try writer.writeBytes(encodeULEB128(UInt32(index + originalFuncCount)))
+    try writeSection(.elem, writer: writer) { writer in
+        let count = input.readVarUInt32()
+        try writer.writeBytes(encodeULEB128(UInt32(count)))
+        for _ in 0 ..< count {
+            let tableIndex = input.readVarUInt32()
+            try writer.writeBytes(encodeULEB128(tableIndex))
+            try input.consumeI32InitExpr(consumer: writer.writeBytes)
+            let funcIndicesCount = input.readVarUInt32()
+            try writer.writeBytes(encodeULEB128(funcIndicesCount))
+            for _ in 0 ..< funcIndicesCount {
+                let funcIndex = input.readVarUInt32()
+                if let (_, index) = trampolines.trampoline(byBaseFuncIndex: Int(funcIndex)) {
+                    try writer.writeBytes(encodeULEB128(UInt32(index + originalFuncCount)))
+                } else {
+                    try writer.writeBytes(encodeULEB128(funcIndex))
+                }
             }
         }
     }
@@ -401,7 +409,7 @@ func transformFunctionSection(input: inout InputStream, writer: OutputWriter, tr
         }
 
         for trampoline in trampolines {
-            let index = UInt32(trampoline.toSignatureIndex)
+            let index = UInt32(trampoline.fromSignatureIndex)
             try writer.writeBytes(encodeULEB128(index))
         }
         return count

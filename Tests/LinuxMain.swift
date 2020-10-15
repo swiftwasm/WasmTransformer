@@ -1,7 +1,1 @@
-import XCTest
-
-import WasmTransformerTests
-
-var tests = [XCTestCaseEntry]()
-tests += WasmTransformerTests.allTests()
-XCTMain(tests)
+fatalError("Use `swift test --enable-test-discovery` to run tests")

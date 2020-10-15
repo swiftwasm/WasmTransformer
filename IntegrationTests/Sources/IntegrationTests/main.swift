@@ -61,8 +61,8 @@ function base64ToUint8Array(base64Str) {
 const wasmBytes = \(wasmBytesScript)
 </script>
 """
-let (tmpHtml, handle) = makeTemporaryFile(suffix: ".html")
-wasmFileHandle.write(html.data(using: .utf8)!)
+let (tmpHtml, htmlFileHandle) = makeTemporaryFile(suffix: ".html")
+htmlFileHandle.write(html.data(using: .utf8)!)
 
 let base64HTML = html.data(using: .utf8)!.base64EncodedString()
 driver.get("\(tmpHtml.absoluteString)")

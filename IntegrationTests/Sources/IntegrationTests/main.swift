@@ -31,7 +31,7 @@ let binaryPath = buildPath.appendingPathComponent("main.wasm")
 let bundleJSPath = buildPath.appendingPathComponent("bundle.js")
 
 func lowerI64Imports(_ input: URL) throws -> URL {
-    let transformer = I64Transformer()
+    let transformer = I64ImportTransformer()
     var inputStream = try InputByteStream(from: binaryPath)
     let writer = InMemoryOutputWriter()
     try transformer.transform(&inputStream, writer: writer)

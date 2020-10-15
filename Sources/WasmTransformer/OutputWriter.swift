@@ -4,7 +4,7 @@ public protocol OutputWriter {
 }
 
 public class InMemoryOutputWriter: OutputWriter {
-    private(set) var _bytes: [UInt8] = []
+    private var _bytes: [UInt8] = []
     
     public init(reservingCapacity capacity: Int = 0) {
         _bytes.reserveCapacity(capacity)

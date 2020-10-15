@@ -11,7 +11,7 @@ class IntegrationTests: XCTestCase {
             .appendingPathComponent("Fixtures/build/main.wasm")
         
         let transformer = I64Transformer()
-        var inputStream = try InputStream(from: binaryPath)
+        var inputStream = try InputByteStream(from: binaryPath)
         let writer = InMemoryOutputWriter()
         try transformer.transform(&inputStream, writer: writer)
     }

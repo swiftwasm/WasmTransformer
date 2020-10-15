@@ -49,7 +49,7 @@ enum Opcode: Equatable {
     case i32WrapI64
     case unknown([UInt8])
 
-    func bytes() -> [UInt8] {
+    func serialize() -> [UInt8] {
         switch self {
         case let .call(funcIndex):
             return [0x10] + encodeULEB128(funcIndex)

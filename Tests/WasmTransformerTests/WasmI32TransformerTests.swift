@@ -4,7 +4,7 @@ import XCTest
 func transformWat(_ input: String) throws -> URL {
     let inputWasm = compileWat(input)
     let transformer = I64Transformer()
-    var inputStream = try InputStream(from: inputWasm)
+    var inputStream = try InputByteStream(from: inputWasm)
     let writer = InMemoryOutputWriter()
     try transformer.transform(&inputStream, writer: writer)
 

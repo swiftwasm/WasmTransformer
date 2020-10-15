@@ -1,4 +1,4 @@
-public struct InputStream {
+public struct InputByteStream {
     private(set) var offset: Int
     let bytes: ArraySlice<UInt8>
     var isEOF: Bool {

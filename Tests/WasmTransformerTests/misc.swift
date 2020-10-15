@@ -39,13 +39,8 @@ func createFile(_ content: String) -> URL {
 func compileWat(_ content: String, options: [String] = []) -> URL {
     let module = createFile(content)
     let (output, _) = makeTemporaryFile()
-    let path = ProcessInfo.processInfo.environment["WASM_TRANSFORMER_WAT2WASM"] ?? "/usr/local/bin/wat2wasm"
-    exec(path, [module.path, "-o", output.path] + options)
+    exec("/usr/local/bin/wat2wasm", [module.path, "-o", output.path] + options)
     return output
-}
-
-func runWasm(_ input: URL) {
-    exec("/usr/local/bin/wasmtime", [input.path])
 }
 
 func wasmObjdump(_ input: URL, args: [String]) -> String {
@@ -55,7 +50,7 @@ func wasmObjdump(_ input: URL, args: [String]) -> String {
 
 @testable import WasmTransformer
 
-extension WasmTransformer.InputStream {
+extension WasmTransformer.InputByteStream {
     init(from url: URL) throws {
         let bytes = try Array(Data(contentsOf: url))
         self.init(bytes: bytes)

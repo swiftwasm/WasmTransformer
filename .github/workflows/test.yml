@@ -55,5 +55,6 @@ jobs:
         run: |
           brew uninstall $(brew list | grep python) --ignore-dependencies
           sudo pip3 install selenium
+      - uses: mxschmitt/action-tmate@v3
       - run: swift run IntegrationTests
         working-directory: IntegrationTests

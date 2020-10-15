@@ -25,6 +25,7 @@ jobs:
 
   unit-tests:
     runs-on: macos-latest
+    needs: build-fixtures
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
@@ -38,6 +39,7 @@ jobs:
 
   integration-tests:
     runs-on: macos-latest
+    needs: build-fixtures
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2

@@ -1,0 +1,29 @@
+name: Test
+on: [push]
+
+jobs:
+  unit-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install SwiftWasm toolchain
+        run: |
+          VERSION=swift-wasm-5.3-SNAPSHOT-2020-10-13-a
+          TOOLCHAIN_URL="https://github.com/swiftwasm/swift/releases/download/$VERSION/$VERSION-macos-x86_64.tar.gz"
+          wget $TOOLCHAIN_URL
+          tar xfz $VERSION-macos-x86_64.tar.gz.tar.gz
+          echo "SWIFT_TOOLCHAIN=$PWD/$VERSION/usr" >> $GITHUB_ENV 
+      - name: Setup fixtures
+        run: |
+          npm install
+          npm run build
+          make build/main.wasm
+        working-directory: Fixtures
+      - name: Run unit tests
+        run: swift test
+
+  integration-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: mxschmitt/action-tmate@v3

@@ -1,3 +1,2 @@
-SWIFTC ?= swiftc
-build/main: main.swift
-	$(SWIFTC) $< -o $@
+build/main.wasm: main.swift
+	./build.sh $< $@

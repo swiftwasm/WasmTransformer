@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "WasmTransformer",
+    name: "wasm-transformer",
     products: [
         .library(
             name: "WasmTransformer",

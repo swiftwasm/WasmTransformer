@@ -165,8 +165,7 @@ public struct InputByteStream {
         // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
         case 0x00, 0x01: break
         case 0x02, 0x03, 0x04: consumeBlockType()
-        case 0x05: break
-        case 0x0B: break
+        case 0x05, 0x0B: break
         case 0x0C, 0x0D: _ = readVarUInt32() // label index
         case 0x0E: consumeBrTable()
         case 0x0F: break
@@ -182,8 +181,7 @@ public struct InputByteStream {
         case 0x1A, 0x1B: break
 
         // https://webassembly.github.io/spec/core/binary/instructions.html#variable-instructions
-        case 0x20: _ = readVarUInt32()
-        case 0x21 ... 0x24: _ = readVarUInt32() // local index
+        case 0x20 ... 0x24: _ = readVarUInt32() // local index
 
         // https://webassembly.github.io/spec/core/binary/instructions.html#memory-instructions
         case 0x28 ... 0x3E: consumeMemoryArg()

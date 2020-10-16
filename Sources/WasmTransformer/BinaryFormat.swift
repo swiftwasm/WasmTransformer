@@ -42,6 +42,7 @@ enum ConstOpcode: UInt8 {
     case f64Const = 0x44
 }
 
+let END_INST_OPCODE: UInt8 = 0x0B
 enum Opcode: Equatable {
     case call(UInt32)
     case end
@@ -53,7 +54,7 @@ enum Opcode: Equatable {
         switch self {
         case let .call(funcIndex):
             return [0x10] + encodeULEB128(funcIndex)
-        case .end: return [0x0B]
+        case .end: return [END_INST_OPCODE]
         case let .localGet(localIndex):
             return [0x20] + encodeULEB128(localIndex)
         case .i32WrapI64: return [0xA7]

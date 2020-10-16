@@ -37,7 +37,7 @@ jobs:
         run: |
           curl -L -o wabt.tar.gz https://github.com/WebAssembly/wabt/releases/download/1.0.19/wabt-1.0.19-ubuntu.tar.gz
           tar xzvf wabt.tar.gz
-          cp wabt-*/bin/* /usr/local/bin
+          sudo cp wabt-*/bin/* /usr/local/bin
       - name: Run unit tests
         run: swift test
 

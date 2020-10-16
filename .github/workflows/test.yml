@@ -24,7 +24,24 @@ jobs:
           name: test-fixtures
           path: Fixtures/build
 
-  unit-tests:
+  ubuntu-unit-tests:
+    runs-on: ubuntu-latest
+    needs: build-fixtures
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: test-fixtures
+          path: Fixtures/build
+      - name: Install dependencies
+        run: |
+          curl -L -o wabt.tar.gz https://github.com/WebAssembly/wabt/releases/download/1.0.19/wabt-1.0.19-ubuntu.tar.gz
+          tar xzvf wabt.tar.gz
+          sudo cp wabt-*/bin/* /usr/local/bin
+      - name: Run unit tests
+        run: swift test --enable-test-discovery
+
+  macos-unit-tests:
     runs-on: macos-latest
     needs: build-fixtures
     steps:

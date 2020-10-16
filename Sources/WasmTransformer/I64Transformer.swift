@@ -114,7 +114,8 @@ public struct I64ImportTransformer {
     func scan(typeSection: inout TypeSection, from input: inout InputByteStream) throws {
         let count = input.readVarUInt32()
         for _ in 0 ..< count {
-            assert(input.readUInt8() == 0x60)
+            let header = input.readUInt8()
+            assert(header == 0x60)
             let (params, paramsHasI64) = try input.readResultTypes()
             let (results, resultsHasI64) = try input.readResultTypes()
             let hasI64 = paramsHasI64 || resultsHasI64

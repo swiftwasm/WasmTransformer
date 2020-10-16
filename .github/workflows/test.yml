@@ -39,7 +39,7 @@ jobs:
           tar xzvf wabt.tar.gz
           sudo cp wabt-*/bin/* /usr/local/bin
       - name: Run unit tests
-        run: swift test
+        run: swift test --enable-test-discovery
 
   macos-unit-tests:
     runs-on: macos-latest

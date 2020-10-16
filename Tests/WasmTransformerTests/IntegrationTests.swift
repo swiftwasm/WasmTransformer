@@ -1,6 +1,5 @@
 @testable import WasmTransformer
 import XCTest
-import JavaScriptCore
 
 class IntegrationTests: XCTestCase {
     func testSwiftFoundationDate() throws {

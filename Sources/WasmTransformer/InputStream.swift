@@ -114,8 +114,8 @@ public struct InputByteStream {
         case .f32Const, .f64Const, .i64Const:
             throw Error.expectI32Const(constOp)
         }
-        let opcode = try readOpcode()
-        guard opcode == .end else {
+        let opcode = readUInt8()
+        guard opcode == END_INST_OPCODE else {
             throw Error.expectEnd
         }
         try consumer?(bytes[start ..< offset])
@@ -159,22 +159,20 @@ public struct InputByteStream {
         _ = readVarUInt32()
     }
 
-    mutating func readOpcode() throws -> Opcode {
-        let start = offset
+    mutating func readCallInst() throws -> (funcIndex: UInt32, instSize: Int)? {
         let rawCode = readUInt8()
-        var code: Opcode?
         switch rawCode {
         // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
         case 0x00, 0x01: break
         case 0x02, 0x03, 0x04: consumeBlockType()
-        case 0x05: break
-        case 0x0B: code = .end
+        case 0x05, 0x0B: break
         case 0x0C, 0x0D: _ = readVarUInt32() // label index
         case 0x0E: consumeBrTable()
         case 0x0F: break
         case 0x10:
-            let funcIndex = readVarUInt32()
-            code = .call(funcIndex)
+            let (funcIndex, advanced) = decodeULEB128(bytes[offset...], UInt32.self)
+            offset += advanced
+            return (funcIndex, 1 + advanced)
         case 0x11:
             _ = readVarUInt32() // type index
             _ = readUInt8() // 0x00
@@ -183,8 +181,7 @@ public struct InputByteStream {
         case 0x1A, 0x1B: break
 
         // https://webassembly.github.io/spec/core/binary/instructions.html#variable-instructions
-        case 0x20: code = .localGet(readVarUInt32())
-        case 0x21 ... 0x24: _ = readVarUInt32() // local index
+        case 0x20 ... 0x24: _ = readVarUInt32() // local index
 
         // https://webassembly.github.io/spec/core/binary/instructions.html#memory-instructions
         case 0x28 ... 0x3E: consumeMemoryArg()
@@ -195,17 +192,11 @@ public struct InputByteStream {
         case 0x42: consumeULEB128(UInt64.self)
         case 0x43: _ = read(4)
         case 0x44: _ = read(8)
-        case 0x45 ... 0xA6: break
-        case 0xA7: code = .i32WrapI64
-        case 0xA8 ... 0xC4: break
+        case 0x45 ... 0xC4: break
         case 0xFC: _ = readVarUInt32()
         default:
             throw Error.unexpectedOpcode(rawCode)
         }
-        if let code = code {
-            return code
-        } else {
-            return .unknown(Array(bytes[start ..< offset]))
-        }
+        return nil
     }
 }

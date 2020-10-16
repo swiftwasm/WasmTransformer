@@ -228,7 +228,7 @@ func transformElemSection(input: inout InputByteStream, writer: OutputWriter,
         for _ in 0 ..< count {
             let tableIndex = input.readVarUInt32()
             try writer.writeBytes(encodeULEB128(tableIndex))
-            try input.consumeI32InitExpr(consumer: writer.writeBytes)
+            try input.consumeI32InitExpr(consumer: { try writer.writeBytes($0) })
             let funcIndicesCount = input.readVarUInt32()
             try writer.writeBytes(encodeULEB128(funcIndicesCount))
             for _ in 0 ..< funcIndicesCount {

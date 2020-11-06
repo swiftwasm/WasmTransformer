@@ -9,7 +9,7 @@ jobs:
       - name: Install SwiftWasm toolchain
         run: |
           VERSION=swift-wasm-5.3.0-RELEASE
-          TOOLCHAIN_URL="https://github.com/swiftwasm/swift/releases/download/$VERSION/$VERSION-macos-x86_64.pkg"
+          TOOLCHAIN_URL="https://github.com/swiftwasm/swift/releases/download/$VERSION/$VERSION-macos_x86_64.pkg"
           wget $TOOLCHAIN_URL
           installer -pkg $VERSION-macos-x86_64.pkg
           echo "SWIFT_TOOLCHAIN=$HOME/Library/Developer/Toolchains/$VERSION.xctoolchain/usr" >> $GITHUB_ENV

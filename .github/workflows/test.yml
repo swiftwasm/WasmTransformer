@@ -8,7 +8,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install SwiftWasm toolchain
         run: |
-          VERSION=swift-wasm-5.3-SNAPSHOT-2020-10-13-a
+          VERSION=swift-wasm-5.3.0-RELEASE
           TOOLCHAIN_URL="https://github.com/swiftwasm/swift/releases/download/$VERSION/$VERSION-macos-x86_64.tar.gz"
           wget $TOOLCHAIN_URL
           tar xfz $VERSION-macos-x86_64.tar.gz

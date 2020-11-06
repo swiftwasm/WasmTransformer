@@ -1,7 +1,7 @@
 @testable import WasmTransformer
 import XCTest
 
-func transformWat(_ input: String) throws -> URL {
+private func transformWat(_ input: String) throws -> URL {
     let inputWasm = compileWat(input)
     let transformer = I64ImportTransformer()
     var inputStream = try InputByteStream(from: inputWasm)
@@ -13,7 +13,7 @@ func transformWat(_ input: String) throws -> URL {
     return url
 }
 
-final class WasmTransformerTests: XCTestCase {
+final class I64ImportTransformerTests: XCTestCase {
 
     func testI64ParamsImport() throws {
         let wat = """

@@ -8,11 +8,8 @@ public struct I64ImportTransformer {
     public init() {}
 
     public func transform<Writer: OutputWriter>(_ input: inout InputByteStream, writer: Writer) throws {
-        let maybeMagic = input.read(4)
-        assert(maybeMagic.elementsEqual(magic))
+        input.readHeader()
         try writer.writeBytes(magic)
-        let maybeVersion = input.read(4)
-        assert(maybeVersion.elementsEqual(version))
         try writer.writeBytes(version)
 
         var importedFunctionCount = 0
@@ -20,22 +17,19 @@ public struct I64ImportTransformer {
         do {
             // Phase 1. Scan Type and Import sections to determine import records
             //          which will be lowered.
-            var rawSections: [RawSection] = []
+            var sections: [SectionInfo] = []
             var typeSection = TypeSection()
             var importSection: ImportSection?
             Phase1: while !input.isEOF {
-                let offset = input.offset
-                let type = input.readUInt8()
-                let size = Int(input.readVarUInt32())
-                let contentStart = input.offset
-                let sectionType = SectionType(rawValue: type)
+                let sectionInfo = try input.readSectionInfo()
+                let contentStart = sectionInfo.endOffset - sectionInfo.size
 
-                switch sectionType {
+                switch sectionInfo.type {
                 case .type:
                     try scan(typeSection: &typeSection, from: &input)
                 case .import:
-                    let partialStart = input.bytes.startIndex + offset
-                    let partialEnd = contentStart + size
+                    let partialStart = input.bytes.startIndex + sectionInfo.startOffset
+                    let partialEnd = contentStart + sectionInfo.size
                     let partialBytes = input.bytes[partialStart ..< partialEnd]
                     var section = ImportSection(input: InputByteStream(bytes: partialBytes))
                     importedFunctionCount = try scan(
@@ -45,12 +39,12 @@ public struct I64ImportTransformer {
                     importSection = section
                     break Phase1
                 case .custom:
-                    rawSections.append((startOffset: offset, endOffset: contentStart + size))
-                    input.read(size)
+                    sections.append(sectionInfo)
+                    input.skip(sectionInfo.size)
                 default:
-                    throw Error.unexpectedSection(type)
+                    throw Error.unexpectedSection(sectionInfo.type.rawValue)
                 }
-                assert(input.offset == contentStart + size)
+                assert(input.offset == contentStart + sectionInfo.size)
             }
 
             // Phase 2. Write out Type and Import section based on scanned results.
@@ -59,8 +53,8 @@ public struct I64ImportTransformer {
                 try importSection.write(to: writer)
             }
 
-            for rawSection in rawSections {
-                try writer.writeBytes(input.bytes[rawSection.startOffset ..< rawSection.endOffset])
+            for section in sections {
+                try writer.writeBytes(input.bytes[section.startOffset ..< section.endOffset])
             }
         }
 
@@ -102,7 +96,7 @@ public struct I64ImportTransformer {
             case .custom, .table, .memory, .global, .export, .start, .data, .dataCount:
                 // FIXME: Support re-export of imported i64 functions
                 try writer.writeBytes(input.bytes[offset ..< contentStart + size])
-                input.read(size)
+                input.skip(size)
             case .none:
                 throw Error.unexpectedSection(type)
             }
@@ -166,16 +160,7 @@ public struct I64ImportTransformer {
     }
 }
 
-func writeSection<T>(_ type: SectionType, writer: OutputWriter, bodyWriter: (OutputWriter) throws -> T) throws -> T {
-    try writer.writeByte(type.rawValue)
-    let buffer = InMemoryOutputWriter()
-    let result = try bodyWriter(buffer)
-    try writer.writeBytes(encodeULEB128(UInt32(buffer.bytes().count)))
-    try writer.writeBytes(buffer.bytes())
-    return result
-}
-
-func transformCodeSection(input: inout InputByteStream, writer: OutputWriter,
+private func transformCodeSection(input: inout InputByteStream, writer: OutputWriter,
                           trampolines: Trampolines, originalFuncCount: Int) throws
 {
     try writeSection(.code, writer: writer) { writer in
@@ -219,7 +204,7 @@ func transformCodeSection(input: inout InputByteStream, writer: OutputWriter,
 }
 
 /// Read Elem section and rewrite i64 functions with trampoline functions.
-func transformElemSection(input: inout InputByteStream, writer: OutputWriter,
+private func transformElemSection(input: inout InputByteStream, writer: OutputWriter,
                           trampolines: Trampolines, originalFuncCount: Int) throws
 {
     try writeSection(.elem, writer: writer) { writer in
@@ -244,7 +229,7 @@ func transformElemSection(input: inout InputByteStream, writer: OutputWriter,
 }
 
 /// Write out Func section and add trampoline signatures.
-func transformFunctionSection(input: inout InputByteStream, writer: OutputWriter, trampolines: Trampolines) throws -> Int {
+private func transformFunctionSection(input: inout InputByteStream, writer: OutputWriter, trampolines: Trampolines) throws -> Int {
     try writeSection(.function, writer: writer) { writer in
         let count = Int(input.readVarUInt32())
         let newCount = count + trampolines.count

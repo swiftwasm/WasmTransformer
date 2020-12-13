@@ -1,8 +1,8 @@
-struct SectionInfo {
-    let startOffset: Int
-    let endOffset: Int
-    let type: SectionType
-    let size: Int
+public struct SectionInfo: Equatable {
+    public let startOffset: Int
+    public let endOffset: Int
+    public let type: SectionType
+    public let size: Int
 }
 
 struct TypeSection {

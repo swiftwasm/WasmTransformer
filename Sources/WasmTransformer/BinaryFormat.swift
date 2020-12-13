@@ -4,7 +4,7 @@ let version: [UInt8] = [0x01, 0x00, 0x00, 0x00]
 let LIMITS_HAS_MAX_FLAG: UInt8 = 0x1
 let LIMITS_IS_SHARED_FLAG: UInt8 = 0x2
 
-enum SectionType: UInt8 {
+public enum SectionType: UInt8 {
     case custom = 0
     case type = 1
     case `import` = 2

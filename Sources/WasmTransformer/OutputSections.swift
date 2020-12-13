@@ -1,6 +1,9 @@
-typealias RawSection = (
-    startOffset: Int, endOffset: Int
-)
+struct SectionInfo {
+    let startOffset: Int
+    let endOffset: Int
+    let type: SectionType
+    let size: Int
+}
 
 struct TypeSection {
     private(set) var signatures: [FuncSignature] = []
@@ -75,4 +78,13 @@ struct ImportSection {
         try writer.writeBytes(encodeULEB128(UInt32(contentBuffer.bytes().count)))
         try writer.writeBytes(contentBuffer.bytes())
     }
+}
+
+func writeSection<T>(_ type: SectionType, writer: OutputWriter, bodyWriter: (OutputWriter) throws -> T) throws -> T {
+    try writer.writeByte(type.rawValue)
+    let buffer = InMemoryOutputWriter()
+    let result = try bodyWriter(buffer)
+    try writer.writeBytes(encodeULEB128(UInt32(buffer.bytes().count)))
+    try writer.writeBytes(buffer.bytes())
+    return result
 }

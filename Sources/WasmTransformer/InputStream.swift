@@ -14,7 +14,34 @@ public struct InputByteStream {
         self.init(bytes: bytes[...])
     }
 
-    @discardableResult
+    mutating func readHeader() {
+        let maybeMagic = read(4)
+        assert(maybeMagic.elementsEqual(magic))
+        let maybeVersion = read(4)
+        assert(maybeVersion.elementsEqual(version))
+    }
+
+    mutating func readSectionInfo() throws -> SectionInfo {
+        let startOffset = offset
+        let rawType = readUInt8()
+        guard let type = SectionType(rawValue: rawType) else {
+            throw Error.unexpectedSection(rawType)
+        }
+        let size = Int(readVarUInt32())
+        let contentStart = offset
+
+        return .init(
+            startOffset: startOffset,
+            endOffset: contentStart + size,
+            type: type,
+            size: size
+        )
+    }
+
+    mutating func skip(_ length: Int) {
+        offset += length
+    }
+
     mutating func read(_ length: Int) -> ArraySlice<UInt8> {
         let result = bytes[offset ..< offset + length]
         offset += length
@@ -42,6 +69,7 @@ public struct InputByteStream {
         case expectConstOpcode(UInt8)
         case expectI32Const(ConstOpcode)
         case unexpectedOpcode(UInt8)
+        case unexpectedSection(UInt8)
         case expectEnd
     }
 

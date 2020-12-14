@@ -38,6 +38,10 @@ public struct InputByteStream {
         )
     }
 
+    public mutating func seek(_ offset: Int) {
+        self.offset = offset
+    }
+
     public mutating func skip(_ length: Int) {
         offset += length
     }

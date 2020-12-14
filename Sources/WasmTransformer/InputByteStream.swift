@@ -38,11 +38,11 @@ public struct InputByteStream {
         )
     }
 
-    mutating func skip(_ length: Int) {
+    public mutating func skip(_ length: Int) {
         offset += length
     }
 
-    mutating func read(_ length: Int) -> ArraySlice<UInt8> {
+    public mutating func read(_ length: Int) -> ArraySlice<UInt8> {
         let result = bytes[offset ..< offset + length]
         offset += length
         return result

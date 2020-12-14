@@ -1,7 +1,7 @@
 public struct InputByteStream {
-    private(set) var offset: Int
-    let bytes: ArraySlice<UInt8>
-    var isEOF: Bool {
+    public private(set) var offset: Int
+    public let bytes: ArraySlice<UInt8>
+    public var isEOF: Bool {
         offset >= bytes.endIndex
     }
 

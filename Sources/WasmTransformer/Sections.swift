@@ -5,8 +5,22 @@ public struct SectionInfo: Equatable {
     public let size: Int
 }
 
-struct TypeSection {
-    private(set) var signatures: [FuncSignature] = []
+public struct TypeSection {
+    public private(set) var signatures: [FuncSignature] = []
+
+    init() {}
+
+    public init(from input: inout InputByteStream) throws {
+        let count = input.readVarUInt32()
+        for _ in 0 ..< count {
+            let header = input.readUInt8()
+            assert(header == 0x60)
+            let (params, paramsHasI64) = try input.readResultTypes()
+            let (results, resultsHasI64) = try input.readResultTypes()
+            let hasI64 = paramsHasI64 || resultsHasI64
+            signatures.append(FuncSignature(params: params, results: results, hasI64: hasI64))
+        }
+    }
 
     func write<Writer: OutputWriter>(to writer: Writer) throws {
         try writeSection(.type, writer: writer) { buffer in

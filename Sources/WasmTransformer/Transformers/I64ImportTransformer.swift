@@ -26,7 +26,7 @@ public struct I64ImportTransformer {
 
                 switch sectionInfo.type {
                 case .type:
-                    try scan(typeSection: &typeSection, from: &input)
+                    typeSection = try TypeSection(from: &input)
                 case .import:
                     let partialStart = input.bytes.startIndex + sectionInfo.startOffset
                     let partialEnd = contentStart + sectionInfo.size
@@ -101,19 +101,6 @@ public struct I64ImportTransformer {
                 throw Error.unexpectedSection(type)
             }
             assert(input.offset == contentStart + size)
-        }
-    }
-
-    /// Returns indices of types that contains i64 in its signature
-    func scan(typeSection: inout TypeSection, from input: inout InputByteStream) throws {
-        let count = input.readVarUInt32()
-        for _ in 0 ..< count {
-            let header = input.readUInt8()
-            assert(header == 0x60)
-            let (params, paramsHasI64) = try input.readResultTypes()
-            let (results, resultsHasI64) = try input.readResultTypes()
-            let hasI64 = paramsHasI64 || resultsHasI64
-            typeSection.append(signature: FuncSignature(params: params, results: results, hasI64: hasI64))
         }
     }
 

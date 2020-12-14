@@ -53,7 +53,7 @@ public struct InputByteStream {
         return byte[byte.startIndex]
     }
 
-    mutating func readVarUInt32() -> UInt32 {
+    public mutating func readVarUInt32() -> UInt32 {
         let (value, advanced) = decodeULEB128(bytes[offset...], UInt32.self)
         offset += advanced
         return value

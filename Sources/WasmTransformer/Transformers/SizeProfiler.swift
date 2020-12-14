@@ -1,13 +1,15 @@
-public func sizeProfiler(_ bytes: [UInt8]) throws -> [SectionInfo] {
-    var input = InputByteStream(bytes: bytes)
-    input.readHeader()
+public extension InputByteStream {
+    mutating func readSectionsInfo() throws -> [SectionInfo] {
+        precondition(offset == bytes.startIndex)
+        readHeader()
 
-    var result = [SectionInfo]()
-    while !input.isEOF {
-        let section = try input.readSectionInfo()
-        result.append(section)
-        input.skip(section.size)
+        var result = [SectionInfo]()
+        while !isEOF {
+            let section = try readSectionInfo()
+            result.append(section)
+            skip(section.size)
 
+        }
+        return result
     }
-    return result
 }

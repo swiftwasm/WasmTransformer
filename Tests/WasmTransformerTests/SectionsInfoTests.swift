@@ -1,8 +1,8 @@
 @testable import WasmTransformer
 import XCTest
 
-final class SizeProfilerTests: XCTestCase {
-    func testSizeProfiler() throws {
+final class SectionsInfoTests: XCTestCase {
+    func testSectionsInfo() throws {
         let wat = """
         (module
           (func $add (result i32)
@@ -15,9 +15,9 @@ final class SizeProfilerTests: XCTestCase {
         """
 
         let binaryURL = compileWat(wat, options: ["--debug-names"])
-        let binary = try [UInt8](Data(contentsOf: binaryURL))
+        var input = try InputByteStream(bytes: [UInt8](Data(contentsOf: binaryURL)))
         try XCTAssertEqual(
-            sizeProfiler(binary),
+            input.readSectionsInfo(),
             [
                 .init(startOffset: 8, endOffset: 15, type: .type, size: 5),
                 .init(startOffset: 15, endOffset: 19, type: .function, size: 2),

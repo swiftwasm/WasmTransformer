@@ -1,7 +1,7 @@
 public struct InputByteStream {
-    private(set) var offset: Int
-    let bytes: ArraySlice<UInt8>
-    var isEOF: Bool {
+    public private(set) var offset: Int
+    public let bytes: ArraySlice<UInt8>
+    public var isEOF: Bool {
         offset >= bytes.endIndex
     }
 
@@ -38,11 +38,15 @@ public struct InputByteStream {
         )
     }
 
-    mutating func skip(_ length: Int) {
+    public mutating func seek(_ offset: Int) {
+        self.offset = offset
+    }
+
+    public mutating func skip(_ length: Int) {
         offset += length
     }
 
-    mutating func read(_ length: Int) -> ArraySlice<UInt8> {
+    public mutating func read(_ length: Int) -> ArraySlice<UInt8> {
         let result = bytes[offset ..< offset + length]
         offset += length
         return result
@@ -53,7 +57,7 @@ public struct InputByteStream {
         return byte[byte.startIndex]
     }
 
-    mutating func readVarUInt32() -> UInt32 {
+    public mutating func readVarUInt32() -> UInt32 {
         let (value, advanced) = decodeULEB128(bytes[offset...], UInt32.self)
         offset += advanced
         return value

@@ -20,7 +20,7 @@ public enum SectionType: UInt8 {
     case dataCount = 12
 }
 
-enum ValueType: UInt8, Equatable {
+public enum ValueType: UInt8, Equatable {
     case i32 = 0x7F
     case i64 = 0x7E
     case f32 = 0x7D
@@ -63,9 +63,9 @@ enum Opcode: Equatable {
     }
 }
 
-struct FuncSignature {
-    let params: [ValueType]
-    let results: [ValueType]
+public struct FuncSignature {
+    public let params: [ValueType]
+    public let results: [ValueType]
     let hasI64: Bool
 
     func lowered() -> FuncSignature {

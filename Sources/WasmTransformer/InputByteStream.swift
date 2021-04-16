@@ -191,9 +191,8 @@ public struct InputByteStream {
         _ = readVarUInt32()
     }
 
-    mutating func readCallInst() throws -> (funcIndex: UInt32, instSize: Int)? {
-        let rawCode = readUInt8()
-        switch rawCode {
+    mutating func consumeInst(code: UInt8) throws {
+        switch code {
         // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
         case 0x00, 0x01: break
         case 0x02, 0x03, 0x04: consumeBlockType()
@@ -201,10 +200,7 @@ public struct InputByteStream {
         case 0x0C, 0x0D: _ = readVarUInt32() // label index
         case 0x0E: consumeBrTable()
         case 0x0F: break
-        case 0x10:
-            let (funcIndex, advanced) = decodeULEB128(bytes[offset...], UInt32.self)
-            offset += advanced
-            return (funcIndex, 1 + advanced)
+        case 0x10: _ = readVarUInt32()
         case 0x11:
             _ = readVarUInt32() // type index
             _ = readUInt8() // 0x00
@@ -227,8 +223,21 @@ public struct InputByteStream {
         case 0x45 ... 0xC4: break
         case 0xFC: _ = readVarUInt32()
         default:
-            throw Error.unexpectedOpcode(rawCode)
+            throw Error.unexpectedOpcode(code)
         }
-        return nil
+    }
+
+    mutating func readCallInst() throws -> (funcIndex: UInt32, instSize: Int)? {
+        let rawCode = readUInt8()
+        switch rawCode {
+        // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
+        case 0x10:
+            let (funcIndex, advanced) = decodeULEB128(bytes[offset...], UInt32.self)
+            offset += advanced
+            return (funcIndex, 1 + advanced)
+        default:
+            try consumeInst(code: rawCode)
+            return nil
+        }
     }
 }

@@ -19,10 +19,10 @@ final class SectionsInfoTests: XCTestCase {
         try XCTAssertEqual(
             input.readSectionsInfo(),
             [
-                .init(startOffset: 8, endOffset: 15, type: .type, size: 5),
-                .init(startOffset: 15, endOffset: 19, type: .function, size: 2),
-                .init(startOffset: 19, endOffset: 30, type: .code, size: 9),
-                .init(startOffset: 30, endOffset: 50, type: .custom, size: 18),
+                .init(startOffset: 8,  contentStart: 10, type: .type, size: 5),
+                .init(startOffset: 15, contentStart: 17, type: .function, size: 2),
+                .init(startOffset: 19, contentStart: 21, type: .code, size: 9),
+                .init(startOffset: 30, contentStart: 32, type: .custom, size: 18),
             ]
         )
     }

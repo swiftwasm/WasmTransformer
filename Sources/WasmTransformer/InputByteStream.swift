@@ -32,7 +32,7 @@ public struct InputByteStream {
 
         return .init(
             startOffset: startOffset,
-            endOffset: contentStart + size,
+            contentStart: contentStart,
             type: type,
             size: size
         )

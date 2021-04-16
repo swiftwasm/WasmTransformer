@@ -1,6 +1,9 @@
 public struct SectionInfo: Equatable {
     public let startOffset: Int
-    public let endOffset: Int
+    public let contentStart: Int
+    public var endOffset: Int {
+        contentStart + size
+    }
     public let type: SectionType
     public let size: Int
 }

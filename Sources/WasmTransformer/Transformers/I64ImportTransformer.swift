@@ -22,14 +22,13 @@ public struct I64ImportTransformer {
             var importSection: ImportSection?
             Phase1: while !input.isEOF {
                 let sectionInfo = try input.readSectionInfo()
-                let contentStart = sectionInfo.endOffset - sectionInfo.size
 
                 switch sectionInfo.type {
                 case .type:
                     typeSection = try TypeSection(from: &input)
                 case .import:
                     let partialStart = input.bytes.startIndex + sectionInfo.startOffset
-                    let partialEnd = contentStart + sectionInfo.size
+                    let partialEnd = sectionInfo.contentStart + sectionInfo.size
                     let partialBytes = input.bytes[partialStart ..< partialEnd]
                     var section = ImportSection(input: InputByteStream(bytes: partialBytes))
                     importedFunctionCount = try scan(
@@ -44,7 +43,7 @@ public struct I64ImportTransformer {
                 default:
                     throw Error.unexpectedSection(sectionInfo.type.rawValue)
                 }
-                assert(input.offset == contentStart + sectionInfo.size)
+                assert(input.offset == sectionInfo.endOffset)
             }
 
             // Phase 2. Write out Type and Import section based on scanned results.

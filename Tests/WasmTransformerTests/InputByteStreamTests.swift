@@ -14,7 +14,6 @@ final class InputByteStreamTests: XCTestCase {
             input.readHeader()
             readUntilCode: while !input.isEOF {
                 let sectionInfo = try! input.readSectionInfo()
-                let contentStart = sectionInfo.endOffset - sectionInfo.size
 
                 switch sectionInfo.type {
                 case .code:
@@ -22,7 +21,6 @@ final class InputByteStreamTests: XCTestCase {
                 default:
                     input.skip(sectionInfo.size)
                 }
-                assert(input.offset == contentStart + sectionInfo.size)
             }
 
             let count = Int(input.readVarUInt32())

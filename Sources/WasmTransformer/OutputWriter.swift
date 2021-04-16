@@ -3,6 +3,14 @@ public protocol OutputWriter {
     func writeBytes<S: Sequence>(_ bytes: S) throws where S.Element == UInt8
 }
 
+extension OutputWriter {
+    func writeString(_ value: String) throws {
+        let bytes = value.utf8
+        try writeBytes(encodeULEB128(UInt32(bytes.count)))
+        try writeBytes(bytes)
+    }
+}
+
 public class InMemoryOutputWriter: OutputWriter {
     private var _bytes: [UInt8] = []
     

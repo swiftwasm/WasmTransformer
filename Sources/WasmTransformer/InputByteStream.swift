@@ -154,7 +154,8 @@ public struct InputByteStream {
     }
 
     /// https://webassembly.github.io/spec/core/binary/modules.html#binary-local
-    mutating func consumeLocals(consumer: Consumer? = nil) throws {
+    @discardableResult
+    mutating func consumeLocals(consumer: Consumer? = nil) throws -> UInt32 {
         let start = offset
         let count = readVarUInt32()
         for _ in 0..<count {
@@ -162,6 +163,7 @@ public struct InputByteStream {
             _ = readUInt8() // value type
         }
         try consumer?(bytes[start ..< offset])
+        return count
     }
 
     mutating func consumeBlockType() {
@@ -227,14 +229,24 @@ public struct InputByteStream {
         }
     }
 
-    mutating func readCallInst() throws -> (funcIndex: UInt32, instSize: Int)? {
+    mutating func readGlobalSet() throws -> UInt32? {
+        let rawCode = readUInt8()
+        switch rawCode {
+        // https://webassembly.github.io/spec/core/binary/instructions.html#variable-instructions
+        case 0x24:
+            return readVarUInt32()
+        default:
+            try consumeInst(code: rawCode)
+            return nil
+        }
+    }
+
+    mutating func readCallInst() throws -> UInt32? {
         let rawCode = readUInt8()
         switch rawCode {
         // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
         case 0x10:
-            let (funcIndex, advanced) = decodeULEB128(bytes[offset...], UInt32.self)
-            offset += advanced
-            return (funcIndex, 1 + advanced)
+            return readVarUInt32()
         default:
             try consumeInst(code: rawCode)
             return nil

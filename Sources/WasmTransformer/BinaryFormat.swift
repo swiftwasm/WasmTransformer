@@ -42,21 +42,42 @@ enum ConstOpcode: UInt8 {
     case f64Const = 0x44
 }
 
+
+enum BlockType {
+    case empty
+}
+
 let END_INST_OPCODE: UInt8 = 0x0B
 enum Opcode: Equatable {
-    case call(UInt32)
+    case unreachable
     case end
     case localGet(UInt32)
+    case localSet(UInt32)
+    case globalSet(UInt32)
+    case `if`(BlockType)
+    case call(UInt32)
+    case i32Const(Int32)
+    case i32LtS
     case i32WrapI64
     case unknown([UInt8])
 
     func serialize() -> [UInt8] {
         switch self {
-        case let .call(funcIndex):
-            return [0x10] + encodeULEB128(funcIndex)
+        case .unreachable: return [0x00]
         case .end: return [END_INST_OPCODE]
         case let .localGet(localIndex):
             return [0x20] + encodeULEB128(localIndex)
+        case let .localSet(localIndex):
+            return [0x21] + encodeULEB128(localIndex)
+        case let .globalSet(globalIndex):
+            return [0x24] + encodeULEB128(globalIndex)
+        case .if(.empty):
+            return [0x04, 0x40]
+        case let .call(funcIndex):
+            return [0x10] + encodeULEB128(funcIndex)
+        case let .i32Const(value):
+            return [0x41] + encodeSLEB128(value)
+        case .i32LtS: return [0x48]
         case .i32WrapI64: return [0xA7]
         case let .unknown(bytes): return bytes
         }

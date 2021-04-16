@@ -50,10 +50,14 @@ public struct TypeSection {
 }
 
 typealias ImportFuncReplacement = (index: Int, toTypeIndex: Int)
+typealias FunctionImport = (
+    module: String, field: String, signatureIndex: UInt32
+)
 
 struct ImportSection {
     var input: InputByteStream
     var replacements: [ImportFuncReplacement] = []
+    var extraFunctionImports: [FunctionImport] = []
 
     mutating func write<Writer: OutputWriter>(to writer: Writer) throws {
         let sectionType = input.readUInt8()
@@ -64,7 +68,9 @@ struct ImportSection {
         let contentBuffer = InMemoryOutputWriter(reservingCapacity: Int(oldContentSize))
 
         let count = input.readVarUInt32()
-        try contentBuffer.writeBytes(encodeULEB128(count))
+        try contentBuffer.writeBytes(
+            encodeULEB128(count + UInt32(extraFunctionImports.count))
+        )
         for index in 0 ..< count {
             try input.consumeString(consumer: contentBuffer.writeBytes) // module name
             try input.consumeString(consumer: contentBuffer.writeBytes) // field name
@@ -91,7 +97,12 @@ struct ImportSection {
                 fatalError()
             }
         }
-        
+        for extraImport in extraFunctionImports {
+            try writer.writeString(extraImport.module)
+            try writer.writeString(extraImport.field)
+            try writer.writeByte(ExternalKind.func.rawValue)
+            try writer.writeBytes(encodeULEB128(extraImport.signatureIndex))
+        }
         try writer.writeBytes(encodeULEB128(UInt32(contentBuffer.bytes().count)))
         try writer.writeBytes(contentBuffer.bytes())
     }

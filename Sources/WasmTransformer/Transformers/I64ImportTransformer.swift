@@ -165,12 +165,12 @@ private func transformCodeSection(input: inout InputByteStream, writer: OutputWr
 
             var nonCallInstStart = input.offset
             while input.offset < bodyEnd {
-                guard let (funcIndex, instSize) = try input.readCallInst(),
+                let nonCallInstEnd = input.offset
+                guard let funcIndex = try input.readCallInst(),
                     let (_, trampolineIndex) = trampolines.trampoline(byBaseFuncIndex: Int(funcIndex))
                 else {
                     continue
                 }
-                let nonCallInstEnd = input.offset - instSize
                 bodyBuffer.append(contentsOf: input.bytes[nonCallInstStart..<nonCallInstEnd])
                 nonCallInstStart = input.offset
                 let newTargetIndex = originalFuncCount + trampolineIndex

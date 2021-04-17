@@ -17,9 +17,9 @@ final class StackOverflowSanitizerTests: XCTestCase {
         let binaryURL = compileWat(wat)
         var input = try InputByteStream(bytes: [UInt8](Data(contentsOf: binaryURL)))
 
-        let writer = InMemoryOutputWriter()
+        var writer = InMemoryOutputWriter()
         let transformer = StackOverflowSanitizer()
-        try transformer.transform(&input, writer: writer)
+        try transformer.transform(&input, writer: &writer)
         let (url, handle) = makeTemporaryFile()
         handle.write(Data(writer.bytes()))
         let disassemble = wasmObjdump(url, args: ["--disassemble"])

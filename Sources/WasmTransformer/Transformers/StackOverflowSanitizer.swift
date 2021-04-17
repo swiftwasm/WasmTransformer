@@ -8,7 +8,7 @@ public struct StackOverflowSanitizer {
 
     public init() {}
 
-    public func transform<Writer: OutputWriter>(_ input: inout InputByteStream, writer: Writer) throws {
+    public func transform<Writer: OutputWriter>(_ input: inout InputByteStream, writer: inout Writer) throws {
         let version = try input.readHeader()
         try writer.writeBytes(magic)
         try writer.writeBytes(version)
@@ -18,7 +18,7 @@ public struct StackOverflowSanitizer {
 
             switch sectionInfo.type {
             case .code:
-                try transformCodeSection(input: &input, writer: writer)
+                try transformCodeSection(input: &input, writer: &writer)
             default:
                 try writer.writeBytes(input.bytes[sectionInfo.startOffset ..< sectionInfo.endOffset])
                 input.skip(sectionInfo.size)
@@ -26,8 +26,8 @@ public struct StackOverflowSanitizer {
         }
     }
 
-    func transformCodeSection(input: inout InputByteStream, writer: OutputWriter) throws {
-        try writeSection(.code, writer: writer) { writer in
+    func transformCodeSection<Writer: OutputWriter>(input: inout InputByteStream, writer: inout Writer) throws {
+        try writer.writeSection(.code) { writer in
             let count = Int(input.readVarUInt32())
             try writer.writeBytes(encodeULEB128(UInt32(count)))
             for _ in 0 ..< count {

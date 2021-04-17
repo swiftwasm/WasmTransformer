@@ -17,6 +17,56 @@ extension OutputWriter {
             try writeByte(type.rawValue)
         }
     }
+
+    mutating func writeSection<T>(_ type: SectionType, bodyWriter: (inout InMemoryOutputWriter) throws -> T) throws -> T {
+        try writeByte(type.rawValue)
+        var buffer = InMemoryOutputWriter()
+        let result = try bodyWriter(&buffer)
+        try writeBytes(encodeULEB128(UInt32(buffer.bytes().count)))
+        try writeBytes(buffer.bytes())
+        return result
+    }
+
+    mutating func writeVectorSection<Reader: VectorSectionReader>(
+        type: SectionType,
+        reader: Reader, extras: [Reader.Item] = []
+    ) throws where Reader.Item: ByteEncodable {
+        let count = reader.count + UInt32(extras.count)
+        try self.writeSection(type) { buffer in
+            try buffer.writeBytes(encodeULEB128(count))
+            for result in reader {
+                let entry = try result.get()
+                try entry.encode(to: &buffer)
+            }
+            for extra in extras {
+                try extra.encode(to: &buffer)
+            }
+        }
+    }
+
+    mutating func writeVectorSection(
+        type: SectionType,
+        count: UInt32,
+        writeItems: (inout InMemoryOutputWriter) throws -> Void
+    ) throws {
+        try self.writeSection(type) { buffer in
+            try buffer.writeBytes(encodeULEB128(count))
+            try writeItems(&buffer)
+        }
+    }
+
+    mutating func writeVectorSection<Item: ByteEncodable>(
+        type: SectionType,
+        items: [Item] = []
+    ) throws {
+        let count = UInt32(items.count)
+        try self.writeSection(type) { buffer in
+            try buffer.writeBytes(encodeULEB128(count))
+            for extra in items {
+                try extra.encode(to: &buffer)
+            }
+        }
+    }
 }
 
 public class InMemoryOutputWriter: OutputWriter {

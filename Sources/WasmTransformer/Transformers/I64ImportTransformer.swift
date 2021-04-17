@@ -4,6 +4,8 @@ public struct I64ImportTransformer {
         case expectFunctionSection
         case unexpectedSection(UInt8)
     }
+
+    typealias ImportFuncReplacement = (index: Int, toTypeIndex: Int)
     
     public init() {}
 
@@ -54,11 +56,11 @@ public struct I64ImportTransformer {
             try writer.writeVectorSection(type: .type, items: typeSection)
             if var importSection = importSection {
                 try writer.writeVectorSection(type: .import, count: importSection.count) { writer in
-                    for _ in 0 ..< importSection.count {
+                    for index in 0 ..< importSection.count {
                         var entry = try importSection.read()
                         switch entry.descriptor {
-                        case .function(let sigIndex):
-                            if let replacement = replacements.first(where: { $0.index == sigIndex }) {
+                        case .function:
+                            if let replacement = replacements.first(where: { $0.index == index }) {
                                 entry.descriptor = .function(UInt32(replacement.toTypeIndex))
                             }
                         default: break

@@ -11,8 +11,3 @@ public struct SectionInfo: Equatable {
     public let size: Int
 }
 
-
-typealias ImportFuncReplacement = (index: Int, toTypeIndex: Int)
-typealias FunctionImport = (
-    module: String, field: String, signatureIndex: UInt32
-)

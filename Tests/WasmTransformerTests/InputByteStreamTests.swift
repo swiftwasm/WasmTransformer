@@ -11,7 +11,7 @@ final class InputByteStreamTests: XCTestCase {
     func testReadCallInst() {
         measureMetrics([.wallClockTime], automaticallyStartMeasuring: false) {
             var input = try! InputByteStream(from: buildPath.appendingPathComponent("main.wasm"))
-            input.readHeader()
+            _ = try! input.readHeader()
             readUntilCode: while !input.isEOF {
                 let sectionInfo = try! input.readSectionInfo()
 

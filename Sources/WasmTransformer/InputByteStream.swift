@@ -14,11 +14,13 @@ public struct InputByteStream {
         self.init(bytes: bytes[...])
     }
 
-    mutating func readHeader() {
+    mutating func readHeader() throws -> ArraySlice<UInt8> {
         let maybeMagic = read(4)
-        assert(maybeMagic.elementsEqual(magic))
-        let maybeVersion = read(4)
-        assert(maybeVersion.elementsEqual(version))
+        guard maybeMagic.elementsEqual(magic) else {
+            throw Error.badMagic(maybeMagic)
+        }
+        let version = read(4)
+        return version
     }
 
     mutating func readSectionInfo() throws -> SectionInfo {
@@ -69,7 +71,10 @@ public struct InputByteStream {
     }
 
     enum Error: Swift.Error {
+        case badMagic(ArraySlice<UInt8>)
         case invalidValueType(UInt8)
+        case invalidExternalKind(UInt8)
+        case unsupportedExternalKind(ExternalKind)
         case expectConstOpcode(UInt8)
         case expectI32Const(ConstOpcode)
         case unexpectedOpcode(UInt8)
@@ -93,6 +98,14 @@ public struct InputByteStream {
         return (resultTypes, hasI64)
     }
 
+    mutating func readExternalKind() throws -> ExternalKind {
+        let rawKind = readUInt8()
+        guard let kind = ExternalKind(rawValue: rawKind) else {
+            throw Error.invalidExternalKind(rawKind)
+        }
+        return kind
+    }
+
     typealias Consumer = (ArraySlice<UInt8>) throws -> Void
 
     mutating func consumeString(consumer: Consumer? = nil) rethrows {
@@ -102,8 +115,44 @@ public struct InputByteStream {
         try consumer?(bytes[start ..< offset])
     }
 
+    /// https://webassembly.github.io/spec/core/binary/values.html#names
+    mutating func readString() -> String {
+        let start = offset
+        let length = Int(readVarUInt32())
+        offset += length
+        return String(decoding: bytes[start ..< offset], as: UTF8.self)
+    }
+
+    mutating func readImportDescriptor() throws -> ImportDescriptor {
+        let kind = try readExternalKind()
+        switch kind {
+        case .func: return .function(readVarUInt32())
+        case .table: return .table(rawBytes: consumeTable())
+        case .memory: return .memory(rawBytes: consumeMemory())
+        case .global: return .global(rawBytes: consumeGlobalHeader())
+        case .except: throw Error.unsupportedExternalKind(kind)
+        }
+    }
+
+    /// https://webassembly.github.io/spec/core/binary/modules.html#import-section
+    mutating func readImport() throws -> Import {
+        let module = readString()
+        let field = readString()
+        let desc = try readImportDescriptor()
+        return Import(module: module, field: field, descriptor: desc)
+    }
+
+    /// https://webassembly.github.io/spec/core/binary/types.html#value-types
+    mutating func readFuncType() throws -> FuncSignature {
+        let (params, paramsHasI64) = try readResultTypes()
+        let (results, resultsHasI64) = try readResultTypes()
+        let hasI64 = paramsHasI64 || resultsHasI64
+        return FuncSignature(
+            params: params, results: results, hasI64: hasI64
+        )
+    }
     /// https://webassembly.github.io/spec/core/binary/types.html#table-types
-    mutating func consumeTable(consumer: Consumer? = nil) rethrows {
+    mutating func consumeTable() -> ArraySlice<UInt8> {
         let start = offset
         _ = readUInt8() // element type
         let hasMax = readUInt8() != 0
@@ -111,11 +160,11 @@ public struct InputByteStream {
         if hasMax {
             _ = readVarUInt32() // max
         }
-        try consumer?(bytes[start ..< offset])
+        return bytes[start ..< offset]
     }
 
     /// https://webassembly.github.io/spec/core/binary/types.html#memory-types
-    mutating func consumeMemory(consumer: Consumer? = nil) rethrows {
+    mutating func consumeMemory() -> ArraySlice<UInt8> {
         let start = offset
         let flags = readUInt8()
         let hasMax = (flags & LIMITS_HAS_MAX_FLAG) != 0
@@ -123,18 +172,18 @@ public struct InputByteStream {
         if hasMax {
             _ = readVarUInt32() // max
         }
-        try consumer?(bytes[start ..< offset])
+        return bytes[start ..< offset]
     }
 
     /// https://webassembly.github.io/spec/core/binary/types.html#global-types
-    mutating func consumeGlobalHeader(consumer: Consumer? = nil) rethrows {
+    mutating func consumeGlobalHeader() -> ArraySlice<UInt8> {
         let start = offset
         _ = readUInt8() // value type
         _ = readUInt8() // mutable
-        try consumer?(bytes[start ..< offset])
+        return bytes[start ..< offset]
     }
 
-    mutating func consumeI32InitExpr(consumer: Consumer? = nil) throws {
+    mutating func consumeI32InitExpr() throws -> ArraySlice<UInt8> {
         let start = offset
         let code = readUInt8()
         guard let constOp = ConstOpcode(rawValue: code) else {
@@ -150,7 +199,7 @@ public struct InputByteStream {
         guard opcode == END_INST_OPCODE else {
             throw Error.expectEnd
         }
-        try consumer?(bytes[start ..< offset])
+        return bytes[start ..< offset]
     }
 
     /// https://webassembly.github.io/spec/core/binary/modules.html#binary-local

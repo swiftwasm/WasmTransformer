@@ -8,7 +8,7 @@ public struct I64ImportTransformer {
     public init() {}
 
     public func transform<Writer: OutputWriter>(_ input: inout InputByteStream, writer: Writer) throws {
-        input.readHeader()
+        let version = try input.readHeader()
         try writer.writeBytes(magic)
         try writer.writeBytes(version)
 
@@ -199,7 +199,7 @@ private func transformElemSection(input: inout InputByteStream, writer: OutputWr
         for _ in 0 ..< count {
             let tableIndex = input.readVarUInt32()
             try writer.writeBytes(encodeULEB128(tableIndex))
-            try input.consumeI32InitExpr(consumer: { try writer.writeBytes($0) })
+            try writer.writeBytes(input.consumeI32InitExpr())
             let funcIndicesCount = input.readVarUInt32()
             try writer.writeBytes(encodeULEB128(funcIndicesCount))
             for _ in 0 ..< funcIndicesCount {

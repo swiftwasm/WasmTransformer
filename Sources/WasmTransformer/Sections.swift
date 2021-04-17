@@ -4,6 +4,9 @@ public struct SectionInfo: Equatable {
     public var endOffset: Int {
         contentStart + size
     }
+    public var contentRange: Range<Int> {
+        contentStart..<endOffset
+    }
     public let type: SectionType
     public let size: Int
 }
@@ -88,9 +91,9 @@ struct ImportSection {
                     newSignatureIndex = oldSignatureIndex
                 }
                 try contentBuffer.writeBytes(encodeULEB128(newSignatureIndex))
-            case .table:  try input.consumeTable(consumer: contentBuffer.writeBytes)
-            case .memory: try input.consumeMemory(consumer: contentBuffer.writeBytes)
-            case .global: try input.consumeGlobalHeader(consumer: contentBuffer.writeBytes)
+            case .table:  try contentBuffer.writeBytes(input.consumeTable())
+            case .memory: try contentBuffer.writeBytes(input.consumeMemory())
+            case .global: try contentBuffer.writeBytes(input.consumeGlobalHeader())
             case .except:
                 fatalError("not supported yet")
             case .none:

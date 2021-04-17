@@ -4,7 +4,7 @@ public struct CustomSectionStripper {
     public init() {}
 
     public func transform<Writer: OutputWriter>(_ input: inout InputByteStream, writer: Writer) throws {
-        input.readHeader()
+        let version = try input.readHeader()
         try writer.writeBytes(magic)
         try writer.writeBytes(version)
 

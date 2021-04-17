@@ -17,7 +17,7 @@ jobs:
         run: |
           npm install
           npm run build
-          make build/main.wasm
+          make all
         working-directory: Fixtures
       - uses: actions/upload-artifact@v2
         with:
@@ -71,7 +71,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo pip3 install selenium
-      - run: swift run IntegrationTests
+      - run: swift test
         working-directory: IntegrationTests
         env:
           PYTHON_VERSION: 3

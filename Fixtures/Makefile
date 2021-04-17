@@ -20,7 +20,7 @@ build/%.wasm: Entrypoints/%.swift
 	  -luuid \
 	  $< -o $@
 
-build/StackOverflowSanitizerTests.wasm: Entrypoints/StackOverflowSanitizerTests.swift
+build/StackOverflowSanitizerTests.wasm: Entrypoints/StackOverflowSanitizerTests.swift build/stack_sanitizer_support.o
 	$(SWIFTC) -target wasm32-unknown-wasi \
 	  -sdk "${SWIFT_TOOLCHAIN}/share/wasi-sysroot" \
 	  -I "${SWIFT_TOOLCHAIN}/lib/swift/wasi/wasm32" \

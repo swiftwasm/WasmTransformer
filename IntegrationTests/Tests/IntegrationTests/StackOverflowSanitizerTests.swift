@@ -37,7 +37,8 @@ final class StackOverflowSanitizerTests: XCTestCase {
         XCTAssertThrowsError(
             try driver.execute_async_script.throwing.dynamicallyCall(withArguments: entryScript)
         ) { error in
-            XCTAssertTrue(String(describing: error).contains("CATCH_STACK_OVERFLOW"))
+            let description = String(describing: error)
+            XCTAssertTrue(description.contains("CATCH_STACK_OVERFLOW"), description)
         }
         driver.quit()
     }

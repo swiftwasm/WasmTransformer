@@ -14,9 +14,10 @@ public struct StackOverflowSanitizer {
         let version = try input.readHeader()
         try writer.writeBytes(magic)
         try writer.writeBytes(version)
+        var importCount: UInt32?
         var reportFuncIndex: UInt32?
-        var typeSection: [FuncSignature]?
-        var funcSection: [SignatureIndex]?
+        var assertSigIndex: UInt32?
+        var assertFuncIndex: UInt32?
 
         while !input.isEOF {
             let sectionInfo = try input.readSectionInfo()
@@ -24,18 +25,16 @@ public struct StackOverflowSanitizer {
             switch sectionInfo.type {
             case .type:
                 let reader = TypeSectionReader(input: input)
-                typeSection = try reader.collect()
-                try writer.writeBytes(
-                    input.bytes[sectionInfo.startOffset ..< sectionInfo.endOffset]
+                assertSigIndex = reader.count
+                let assertSignature = FuncSignature(
+                    params: [.i32], results: [.i32], hasI64: false
                 )
-            case .function:
-                let reader = FunctionSectionReader(input: input)
-                funcSection = try reader.collect()
-                try writer.writeBytes(
-                    input.bytes[sectionInfo.startOffset ..< sectionInfo.endOffset]
+                try writer.writeVectorSection(
+                    type: .type, reader: reader, extras: [assertSignature]
                 )
             case .import:
                 let reader = ImportSectionReader(input: input)
+                importCount = reader.count
                 let entries = try reader.lazy.map { try $0.get() }
                     .filter {
                         guard case .function(_) = $0.descriptor else { return false }
@@ -49,21 +48,29 @@ public struct StackOverflowSanitizer {
                 try writer.writeBytes(
                     input.bytes[sectionInfo.startOffset ..< sectionInfo.endOffset]
                 )
+            case .function:
+                let reader = FunctionSectionReader(input: input)
+                assertFuncIndex = (importCount ?? 0) + reader.count
+                guard let assertSigIndex = assertSigIndex else {
+                    throw Error.expectTypeSection
+                }
+                try writer.writeVectorSection(
+                    type: .function, reader: reader, extras: [
+                        SignatureIndex(value: assertSigIndex)
+                    ]
+                )
             case .code:
                 guard let reportFuncIndex = reportFuncIndex else {
                     throw Error.supportLibraryNotLinked
                 }
-                guard let typeSection = typeSection else {
-                    throw Error.expectTypeSection
-                }
-                guard let funcSection = funcSection else {
+                guard let assertFuncIndex = assertFuncIndex else {
                     throw Error.expectFunctionSection
                 }
                 var reader = CodeSectionReader(input: input)
                 try transformCodeSection(
                     input: &reader, writer: &writer,
                     reportFuncIndex: reportFuncIndex,
-                    typeSection: typeSection, funcSection: funcSection
+                    assertFuncIndex: assertFuncIndex
                 )
             default:
                 try writer.writeBytes(
@@ -78,48 +85,50 @@ public struct StackOverflowSanitizer {
         input: inout CodeSectionReader,
         writer: inout Writer,
         reportFuncIndex: UInt32,
-        typeSection: [FuncSignature],
-        funcSection: [SignatureIndex]
+        assertFuncIndex: UInt32
     ) throws {
-        try writer.writeVectorSection(type: .code, count: input.count) { writer in
-            for index in 0 ..< input.count {
+        try writer.writeVectorSection(type: .code, count: input.count + 1) { writer in
+            for _ in 0 ..< input.count {
                 let body = try input.read()
-                guard index < funcSection.count else {
-                    throw Error.invalidFunctionIndex
-                }
-                let sigIndex = funcSection[Int(index)]
-                guard sigIndex.value < typeSection.count else {
-                    throw Error.invalidTypeIndex
-                }
                 try transformFunction(
                     input: body, writer: writer,
-                    reportFuncIndex: reportFuncIndex,
-                    signature: typeSection[Int(sigIndex.value)]
+                    assertFuncIndex: assertFuncIndex
                 )
             }
+            try emitStackPointerAssert(reportFuncIndex: reportFuncIndex, writer: writer)
         }
     }
 
+    func emitStackPointerAssert(reportFuncIndex: UInt32, writer: OutputWriter) throws {
+        var bodyBuffer: [UInt8] = []
+        bodyBuffer.append(0x00) // local decl count
+        let opcode = [
+            Opcode.localGet(0),
+            Opcode.i32Const(0),
+            Opcode.i32LtS,
+            Opcode.if(.empty),
+            Opcode.call(reportFuncIndex),
+            Opcode.end,
+            Opcode.localGet(0),
+            Opcode.end,
+        ]
+        bodyBuffer.append(contentsOf: opcode.flatMap { $0.serialize() })
+        try writer.writeBytes(encodeULEB128(UInt32(bodyBuffer.count)))
+        try writer.writeBytes(bodyBuffer)
+    }
+
     func transformFunction(input: FunctionBody, writer: OutputWriter,
-                           reportFuncIndex: UInt32,
-                           signature: FuncSignature) throws {
+                           assertFuncIndex: UInt32) throws {
         let oldSize = Int(input.size)
         var bodyBuffer: [UInt8] = []
         bodyBuffer.reserveCapacity(oldSize)
 
         var locals = input.locals()
-        var spLocalIdx = UInt32(signature.params.count)
 
-        bodyBuffer.append(contentsOf: encodeULEB128(locals.count + 1))
+        bodyBuffer.append(contentsOf: encodeULEB128(locals.count))
         for _ in 0 ..< locals.count {
-            let (count, bytes) = try locals.read()
-            spLocalIdx += count
-            bodyBuffer.append(contentsOf: bytes)
+            try bodyBuffer.append(contentsOf: locals.read().rawBytes)
         }
-        // Add extra "local" to restore stack-pointer
-        bodyBuffer.append(
-            contentsOf: encodeULEB128(UInt32(1)) + [ValueType.i32.rawValue]
-        )
 
         var operators = locals.operators()
         var lazyChunkStart = operators.offset
@@ -136,14 +145,7 @@ public struct StackOverflowSanitizer {
                 guard globalIndex == 0 else { continue }
                 flushLazyChunk()
                 let opcodes = [
-                    Opcode.localSet(spLocalIdx),
-                    Opcode.localGet(spLocalIdx),
-                    Opcode.i32Const(0),
-                    Opcode.i32LtS,
-                    Opcode.if(.empty),
-                    Opcode.call(reportFuncIndex),
-                    Opcode.end,
-                    Opcode.localGet(spLocalIdx),
+                    Opcode.call(assertFuncIndex),
                     Opcode.globalSet(0),
                 ]
                 bodyBuffer.append(contentsOf: opcodes.flatMap { $0.serialize() })

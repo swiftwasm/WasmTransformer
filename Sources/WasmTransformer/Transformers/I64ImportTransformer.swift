@@ -159,31 +159,10 @@ private func transformCodeSection<Writer: OutputWriter>(
     try writer.writeVectorSection(type: .code, count: newCount) { writer in
         for _ in 0 ..< input.count {
             let body = try input.read()
-            var locals = body.locals()
-            var bodyBuffer: [UInt8] = []
-            bodyBuffer.reserveCapacity(Int(body.size))
-
-            bodyBuffer.append(contentsOf: encodeULEB128(locals.count))
-            for _ in 0 ..< locals.count {
-                try bodyBuffer.append(contentsOf: locals.read())
+            let bodyBuffer = try replaceFunctionCall(body: body) { funcIndex in
+                guard let (_, trampolineIndex) = trampolines.trampoline(byBaseFuncIndex: Int(funcIndex)) else { return nil }
+                return UInt32(originalFuncCount + trampolineIndex)
             }
-
-            var operators = locals.operators()
-            var nonCallInstStart = operators.offset
-            while operators.offset < body.endOffset {
-                let nonCallInstEnd = operators.offset
-                guard let funcIndex = try operators.readCallInst(),
-                    let (_, trampolineIndex) = trampolines.trampoline(byBaseFuncIndex: Int(funcIndex))
-                else {
-                    continue
-                }
-                bodyBuffer.append(contentsOf: operators.bytes[nonCallInstStart..<nonCallInstEnd])
-                nonCallInstStart = operators.offset
-                let newTargetIndex = originalFuncCount + trampolineIndex
-                let callInst = Opcode.call(UInt32(newTargetIndex))
-                bodyBuffer.append(contentsOf: callInst.serialize())
-            }
-            bodyBuffer.append(contentsOf: operators.bytes[nonCallInstStart..<operators.offset])
             let newSize = bodyBuffer.count
             try writer.writeBytes(encodeULEB128(UInt32(newSize)))
             try writer.writeBytes(bodyBuffer)
@@ -192,6 +171,36 @@ private func transformCodeSection<Writer: OutputWriter>(
             try trampoline.write(to: writer)
         }
     }
+}
+private func replaceFunctionCall(
+    body: FunctionBody,
+    replace: (_ funcIndex: UInt32) -> UInt32?
+) throws -> [UInt8] {
+    var locals = body.locals()
+    var bodyBuffer: [UInt8] = []
+    bodyBuffer.reserveCapacity(Int(body.size))
+
+    bodyBuffer.append(contentsOf: encodeULEB128(locals.count))
+    for _ in 0 ..< locals.count {
+        try bodyBuffer.append(contentsOf: locals.read())
+    }
+
+    var operators = locals.operators()
+    var nonCallInstStart = operators.offset
+    while operators.offset < body.endOffset {
+        let nonCallInstEnd = operators.offset
+        guard let funcIndex = try operators.readCallInst(),
+              let newFuncIndex = replace(funcIndex) else {
+            continue
+        }
+        bodyBuffer.append(contentsOf: operators.bytes[nonCallInstStart..<nonCallInstEnd])
+        nonCallInstStart = operators.offset
+
+        let callInst = Opcode.call(newFuncIndex)
+        bodyBuffer.append(contentsOf: callInst.serialize())
+    }
+    bodyBuffer.append(contentsOf: operators.bytes[nonCallInstStart..<operators.offset])
+    return bodyBuffer
 }
 
 /// Read Elem section and rewrite i64 functions with trampoline functions.

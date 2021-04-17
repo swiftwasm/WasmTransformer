@@ -24,17 +24,17 @@ final class StackOverflowSanitizerTests: XCTestCase {
         handle.write(Data(writer.bytes()))
         let disassemble = wasmObjdump(url, args: ["--disassemble"])
         let expected = """
-        00001e func[0]:
-         00001f: 01 7f                      | local[0] type=i32
-         000021: 41 00                      | i32.const 0
-         000023: 21 00                      | local.set 0
-         000025: 20 00                      | local.get 0
-         000027: 41 00                      | i32.const 0
-         000029: 48                         | i32.lt_s
-         00002a: 04 40                      | if
-         00002c: 00                         |   unreachable
-         00002d: 0b                         |   end
+        000045 func[1]:
+         000046: 01 7f                      | local[0] type=i32
+         000048: 41 00                      | i32.const 0
+         00004a: 21 00                      | local.set 0
+         00004c: 20 00                      | local.get 0
+         00004e: 41 00                      | i32.const 0
+         000050: 48                         | i32.lt_s
+         000051: 04 40                      | if
+         000053: 10 00                      |   call 0 <__stack_sanitizer.report_stack_overflow>
+         000055: 0b                         |   end
         """
-        XCTAssertTrue(disassemble.contains(expected))
+        XCTAssertContains(disassemble, contains: expected)
     }
 }

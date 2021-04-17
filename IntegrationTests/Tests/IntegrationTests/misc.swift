@@ -20,6 +20,23 @@ func makeTemporaryFile(suffix: String) -> (URL, FileHandle) {
     return (url, handle)
 }
 
+let bundleJSPath = buildPath.appendingPathComponent("bundle.js")
+func createCheckHtml(embedding binaryPath: URL) throws -> String {
+    let wasmBytes = try Data(contentsOf: binaryPath)
+    return try """
+    <script>
+    \(String(contentsOf: bundleJSPath))
+    function base64ToUint8Array(base64Str) {
+        const raw = atob(base64Str);
+        return Uint8Array.from(Array.prototype.map.call(raw, (x) => {
+            return x.charCodeAt(0);
+        }));
+    }
+    const wasmBytes = base64ToUint8Array(\"\(wasmBytes.base64EncodedString())\")
+    </script>
+    """
+}
+
 import WasmTransformer
 
 extension InputByteStream {

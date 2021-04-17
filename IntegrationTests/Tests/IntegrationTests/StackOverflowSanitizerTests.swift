@@ -3,12 +3,12 @@ import Foundation
 import XCTest
 import PythonKit
 
-final class I64ImportTransformerTests: XCTestCase {
+final class StackOverflowSanitizerTests: XCTestCase {
 
-    let binaryPath = buildPath.appendingPathComponent("I64ImportTransformerTests.wasm")
+    let binaryPath = buildPath.appendingPathComponent("StackOverflowSanitizerTests.wasm")
 
-    func lowerI64Imports(_ input: URL) throws -> URL {
-        let transformer = I64ImportTransformer()
+    func instrumentStackSanitizer(_ input: URL) throws -> URL {
+        let transformer = StackOverflowSanitizer()
         var inputStream = try InputByteStream(from: binaryPath)
         var writer = InMemoryOutputWriter()
         try transformer.transform(&inputStream, writer: &writer)
@@ -19,7 +19,8 @@ final class I64ImportTransformerTests: XCTestCase {
     }
 
     func testIntegration() throws {
-        let html = try createCheckHtml(embedding: lowerI64Imports(binaryPath))
+        let wasm = try instrumentStackSanitizer(binaryPath)
+        let html = try createCheckHtml(embedding: wasm)
         let (tmpHtmlURL, htmlFileHandle) = makeTemporaryFile(suffix: ".html")
         htmlFileHandle.write(html.data(using: .utf8)!)
         
@@ -32,8 +33,12 @@ final class I64ImportTransformerTests: XCTestCase {
         driver.set_page_load_timeout(120)
         driver.get(tmpHtmlURL.absoluteString)
         time.sleep(5)
-        driver.execute_async_script("await window.I64ImportTransformerTests(wasmBytes);arguments[0]();")
-        time.sleep(5)
+        let entryScript = "await window.StackOverflowSanitizerTests(wasmBytes);arguments[0]();"
+        XCTAssertThrowsError(
+            try driver.execute_async_script.throwing.dynamicallyCall(withArguments: entryScript)
+        ) { error in
+            XCTAssertTrue(String(describing: error).contains("CATCH_STACK_OVERFLOW"))
+        }
         driver.quit()
     }
 }

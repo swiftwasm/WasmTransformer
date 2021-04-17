@@ -182,7 +182,7 @@ private func replaceFunctionCall(
 
     bodyBuffer.append(contentsOf: encodeULEB128(locals.count))
     for _ in 0 ..< locals.count {
-        try bodyBuffer.append(contentsOf: locals.read())
+        try bodyBuffer.append(contentsOf: locals.read().rawBytes)
     }
 
     var operators = locals.operators()

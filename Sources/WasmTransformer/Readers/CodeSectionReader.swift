@@ -17,7 +17,7 @@ struct LocalsReader {
         self.count = self.input.readVarUInt32()
     }
 
-    mutating func read() throws -> ArraySlice<UInt8> {
+    mutating func read() throws -> (count: UInt32, rawBytes: ArraySlice<UInt8>) {
         input.consumeLocal()
     }
 

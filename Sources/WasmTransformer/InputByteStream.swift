@@ -214,11 +214,11 @@ public struct InputByteStream {
         return count
     }
 
-    mutating func consumeLocal() -> ArraySlice<UInt8> {
+    mutating func consumeLocal() -> (count: UInt32, rawBytes: ArraySlice<UInt8>) {
         let start = offset
-        _ = readVarUInt32() // n
+        let count = readVarUInt32() // n
         _ = readUInt8() // value type
-        return bytes[start ..< offset]
+        return (count, bytes[start ..< offset])
     }
 
     mutating func consumeBlockType() {

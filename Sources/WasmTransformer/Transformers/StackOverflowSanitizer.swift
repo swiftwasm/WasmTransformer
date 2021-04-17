@@ -3,7 +3,10 @@ public struct StackOverflowSanitizer {
     enum Error: Swift.Error {
         case invalidExternalKind(UInt8)
         case expectFunctionSection
-        case invalidSectionOrder
+        case supportLibraryNotLinked
+        case expectTypeSection
+        case invalidFunctionIndex
+        case invalidTypeIndex
     }
 
     public init() {}
@@ -13,50 +16,55 @@ public struct StackOverflowSanitizer {
         try writer.writeBytes(magic)
         try writer.writeBytes(version)
         var reportFuncIndex: UInt32?
-        var existingImportCount: UInt32?
-        var isImportFlushed = false
+        var typeSection: [FuncSignature]?
+        var funcSection: [SignatureIndex]?
 
         while !input.isEOF {
             let sectionInfo = try input.readSectionInfo()
 
-            var importReader: ImportSectionReader?
-            var typeCount: UInt32 = 0
-
-            if !isImportFlushed, sectionInfo.type.rawValue > SectionType.import.rawValue {
-                isImportFlushed = true
-                let reportFunction = Import(
-                    module: "__stack_sanitizer", field: "report_stack_overflow",
-                    descriptor: .function(typeCount)
-                )
-                if let importReader = importReader {
-                    try writer.writeVectorSection(type: .import, reader: importReader,
-                                                  extras: [reportFunction])
-                    reportFuncIndex = importReader.count
-                    existingImportCount = importReader.count
-                } else {
-                    try writer.writeVectorSection(type: .import, items: [reportFunction])
-                    reportFuncIndex = 0
-                    existingImportCount = 0
-                }
-            }
-
             switch sectionInfo.type {
             case .type:
                 let reader = TypeSectionReader(input: input)
-                typeCount = reader.count
+                typeSection = try reader.collect()
+                try writer.writeBytes(
+                    input.bytes[sectionInfo.startOffset ..< sectionInfo.endOffset]
+                )
+            case .function:
+                let reader = FunctionSectionReader(input: input)
+                funcSection = try reader.collect()
+                try writer.writeBytes(
+                    input.bytes[sectionInfo.startOffset ..< sectionInfo.endOffset]
+                )
             case .import:
-                importReader = ImportSectionReader(input: input)
+                let reader = ImportSectionReader(input: input)
+                let entries = try reader.lazy.map { try $0.get() }
+                    .filter {
+                        guard case .function(_) = $0.descriptor else { return false }
+                        return true
+                    }
+                reportFuncIndex = entries.firstIndex(where: {
+                    return $0.module == "__stack_sanitizer" && $0.field == "report_stack_overflow"
+                })
+                .map(UInt32.init)
+
+                try writer.writeBytes(
+                    input.bytes[sectionInfo.startOffset ..< sectionInfo.endOffset]
+                )
             case .code:
-                guard let reportFuncIndex = reportFuncIndex,
-                      let existingImportCount = existingImportCount else {
-                    throw Error.invalidSectionOrder
+                guard let reportFuncIndex = reportFuncIndex else {
+                    throw Error.supportLibraryNotLinked
+                }
+                guard let typeSection = typeSection else {
+                    throw Error.expectTypeSection
+                }
+                guard let funcSection = funcSection else {
+                    throw Error.expectFunctionSection
                 }
                 var reader = CodeSectionReader(input: input)
                 try transformCodeSection(
                     input: &reader, writer: &writer,
                     reportFuncIndex: reportFuncIndex,
-                    existingImportCount: existingImportCount,
-                    extraImportCount: 1
+                    typeSection: typeSection, funcSection: funcSection
                 )
             default:
                 try writer.writeBytes(
@@ -71,17 +79,23 @@ public struct StackOverflowSanitizer {
         input: inout CodeSectionReader,
         writer: inout Writer,
         reportFuncIndex: UInt32,
-        existingImportCount: UInt32,
-        extraImportCount: UInt32
+        typeSection: [FuncSignature],
+        funcSection: [SignatureIndex]
     ) throws {
         try writer.writeVectorSection(type: .code, count: input.count) { writer in
-            for _ in 0 ..< input.count {
+            for index in 0 ..< input.count {
                 let body = try input.read()
+                guard index < funcSection.count else {
+                    throw Error.invalidFunctionIndex
+                }
+                let sigIndex = funcSection[Int(index)]
+                guard sigIndex.value < typeSection.count else {
+                    throw Error.invalidTypeIndex
+                }
                 try transformFunction(
                     input: body, writer: writer,
                     reportFuncIndex: reportFuncIndex,
-                    existingImportCount: existingImportCount,
-                    extraImportCount: extraImportCount
+                    signature: typeSection[Int(sigIndex.value)]
                 )
             }
         }
@@ -89,18 +103,19 @@ public struct StackOverflowSanitizer {
 
     func transformFunction(input: FunctionBody, writer: OutputWriter,
                            reportFuncIndex: UInt32,
-                           existingImportCount: UInt32,
-                           extraImportCount: UInt32) throws {
+                           signature: FuncSignature) throws {
         let oldSize = Int(input.size)
         var bodyBuffer: [UInt8] = []
         bodyBuffer.reserveCapacity(oldSize)
 
         var locals = input.locals()
-        let spLocalIdx = locals.count
+        var spLocalIdx = UInt32(signature.params.count)
 
         bodyBuffer.append(contentsOf: encodeULEB128(locals.count + 1))
         for _ in 0 ..< locals.count {
-            try bodyBuffer.append(contentsOf: locals.read())
+            let (count, bytes) = try locals.read()
+            spLocalIdx += count
+            bodyBuffer.append(contentsOf: bytes)
         }
         // Add extra "local" to restore stack-pointer
         bodyBuffer.append(
@@ -117,14 +132,6 @@ public struct StackOverflowSanitizer {
                 lazyChunkStart = operators.offset
             }
             switch rawCode {
-            case 0x10: // call
-                let funcIndex = operators.readVarUInt32()
-                flushLazyChunk()
-                guard funcIndex >= existingImportCount else {
-                    continue
-                }
-                let call = Opcode.call(funcIndex + extraImportCount)
-                bodyBuffer.append(contentsOf: call.serialize())
             case 0x24: // global.set
                 let globalIndex = operators.readVarUInt32()
                 guard globalIndex == 0 else { continue }
@@ -137,16 +144,16 @@ public struct StackOverflowSanitizer {
                     Opcode.if(.empty),
                     Opcode.call(reportFuncIndex),
                     Opcode.end,
+                    Opcode.localGet(spLocalIdx),
+                    Opcode.globalSet(0),
                 ]
                 bodyBuffer.append(contentsOf: opcodes.flatMap { $0.serialize() })
             default:
                 try operators.consumeInst(code: rawCode)
                 continue
             }
-            guard let globalIndex = try operators.readGlobalSet(), globalIndex == 0 else {
-                continue
-            }
         }
+        bodyBuffer.append(contentsOf: operators.bytes[lazyChunkStart..<operators.offset])
         try writer.writeBytes(encodeULEB128(UInt32(bodyBuffer.count)))
         try writer.writeBytes(bodyBuffer)
     }

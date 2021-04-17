@@ -9,7 +9,7 @@ let package = Package(
         .package(name: "WasmTransformer", path: "../"),
     ],
     targets: [
-        .target(
+        .testTarget(
             name: "IntegrationTests",
             dependencies: ["WasmTransformer", "PythonKit"]),
     ]

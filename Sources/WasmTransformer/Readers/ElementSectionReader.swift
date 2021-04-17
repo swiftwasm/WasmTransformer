@@ -1,19 +1,23 @@
-struct Element {
+struct ElementSegment {
     let flags: UInt32
-    let items: ElementItemsReader
     let initExpr: ArraySlice<UInt8>
+    var items: ElementItemsReader
+}
+
+struct FunctionIndex: Equatable {
+    let value: UInt32
 }
 
 struct ElementItemsReader {
     var input: InputByteStream
     let count: UInt32
 
-    mutating func read() -> UInt32 {
-        input.readVarUInt32()
+    mutating func read() -> FunctionIndex {
+        FunctionIndex(value: input.readVarUInt32())
     }
 }
 
-struct ElementSectionReader {
+struct ElementSectionReader: VectorSectionReader {
     var input: InputByteStream
     let count: UInt32
 
@@ -22,14 +26,14 @@ struct ElementSectionReader {
         self.count = self.input.readVarUInt32()
     }
 
-    mutating func read() throws -> Element {
+    mutating func read() throws -> ElementSegment {
         let flags = input.readVarUInt32()
         let initExpr = try input.consumeI32InitExpr()
         let count = input.readVarUInt32()
-        return Element(
+        return ElementSegment(
             flags: flags,
-            items: ElementItemsReader(input: input, count: count),
-            initExpr: initExpr
+            initExpr: initExpr,
+            items: ElementItemsReader(input: input, count: count)
         )
     }
 }

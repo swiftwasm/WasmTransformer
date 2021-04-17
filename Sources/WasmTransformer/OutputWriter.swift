@@ -9,6 +9,14 @@ extension OutputWriter {
         try writeBytes(encodeULEB128(UInt32(bytes.count)))
         try writeBytes(bytes)
     }
+
+    /// https://webassembly.github.io/spec/core/binary/types.html#result-types
+    func writeResultTypes(_ types: [ValueType]) throws {
+        try writeBytes(encodeULEB128(UInt32(types.count)))
+        for type in types {
+            try writeByte(type.rawValue)
+        }
+    }
 }
 
 public class InMemoryOutputWriter: OutputWriter {

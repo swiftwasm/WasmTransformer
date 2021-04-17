@@ -11,7 +11,7 @@ class IntegrationTests: XCTestCase {
         
         let transformer = I64ImportTransformer()
         var inputStream = try InputByteStream(from: binaryPath)
-        let writer = InMemoryOutputWriter()
-        try transformer.transform(&inputStream, writer: writer)
+        var writer = InMemoryOutputWriter()
+        try transformer.transform(&inputStream, writer: &writer)
     }
 }

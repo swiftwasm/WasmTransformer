@@ -117,10 +117,10 @@ public struct InputByteStream {
 
     /// https://webassembly.github.io/spec/core/binary/values.html#names
     mutating func readString() -> String {
-        let start = offset
         let length = Int(readVarUInt32())
+        let strStart = offset
         offset += length
-        return String(decoding: bytes[start ..< offset], as: UTF8.self)
+        return String(decoding: bytes[strStart ..< offset], as: UTF8.self)
     }
 
     mutating func readImportDescriptor() throws -> ImportDescriptor {
@@ -208,11 +208,17 @@ public struct InputByteStream {
         let start = offset
         let count = readVarUInt32()
         for _ in 0..<count {
-            _ = readVarUInt32() // n
-            _ = readUInt8() // value type
+            _ = consumeLocal()
         }
         try consumer?(bytes[start ..< offset])
         return count
+    }
+
+    mutating func consumeLocal() -> ArraySlice<UInt8> {
+        let start = offset
+        _ = readVarUInt32() // n
+        _ = readUInt8() // value type
+        return bytes[start ..< offset]
     }
 
     mutating func consumeBlockType() {

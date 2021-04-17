@@ -1,4 +1,8 @@
-struct FunctionSectionReader {
+struct SignatureIndex: Equatable {
+    let value: UInt32
+}
+
+struct FunctionSectionReader: VectorSectionReader {
     var input: InputByteStream
     let count: UInt32
 
@@ -7,7 +11,7 @@ struct FunctionSectionReader {
         self.count = self.input.readVarUInt32()
     }
 
-    mutating func read() throws -> UInt32 {
-        return input.readVarUInt32()
+    mutating func read() throws -> SignatureIndex {
+        return SignatureIndex(value: input.readVarUInt32())
     }
 }

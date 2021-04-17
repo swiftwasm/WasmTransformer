@@ -1,7 +1,7 @@
 struct Import {
-    let module: String
-    let field: String
-    let descriptor: ImportDescriptor
+    var module: String
+    var field: String
+    var descriptor: ImportDescriptor
 }
 
 enum ImportDescriptor {
@@ -11,7 +11,7 @@ enum ImportDescriptor {
     case global(rawBytes: ArraySlice<UInt8>)
 }
 
-struct ImportSectionReader {
+struct ImportSectionReader: VectorSectionReader {
     var input: InputByteStream
     let count: UInt32
 

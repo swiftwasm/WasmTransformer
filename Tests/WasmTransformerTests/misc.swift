@@ -56,3 +56,9 @@ extension WasmTransformer.InputByteStream {
         self.init(bytes: bytes)
     }
 }
+
+import XCTest
+
+func XCTAssertContains(_ value: String, contains: String, file: StaticString = #file, line: UInt = #line) {
+    XCTAssertTrue(value.contains(contains), "'\(value)'\n does not contain \n'\(contains)'", file: file, line: line)
+}

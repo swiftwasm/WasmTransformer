@@ -111,6 +111,7 @@ struct ImportSection {
     }
 }
 
+@available(*, deprecated)
 func writeSection<T>(_ type: SectionType, writer: OutputWriter, bodyWriter: (OutputWriter) throws -> T) throws -> T {
     try writer.writeByte(type.rawValue)
     let buffer = InMemoryOutputWriter()

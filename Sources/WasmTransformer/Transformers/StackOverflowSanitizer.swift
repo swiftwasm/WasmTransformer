@@ -1,7 +1,6 @@
 
 public struct StackOverflowSanitizer {
     enum Error: Swift.Error {
-        case invalidExternalKind(UInt8)
         case expectFunctionSection
         case supportLibraryNotLinked
         case expectTypeSection

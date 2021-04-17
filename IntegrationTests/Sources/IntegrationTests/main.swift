@@ -33,8 +33,8 @@ let bundleJSPath = buildPath.appendingPathComponent("bundle.js")
 func lowerI64Imports(_ input: URL) throws -> URL {
     let transformer = I64ImportTransformer()
     var inputStream = try InputByteStream(from: binaryPath)
-    let writer = InMemoryOutputWriter()
-    try transformer.transform(&inputStream, writer: writer)
+    var writer = InMemoryOutputWriter()
+    try transformer.transform(&inputStream, writer: &writer)
 
     let (url, wasmFileHandle) = makeTemporaryFile(suffix: ".wasm")
     wasmFileHandle.write(Data(writer.bytes()))

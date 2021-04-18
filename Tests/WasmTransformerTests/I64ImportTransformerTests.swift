@@ -5,8 +5,8 @@ private func transformWat(_ input: String) throws -> URL {
     let inputWasm = compileWat(input)
     let transformer = I64ImportTransformer()
     var inputStream = try InputByteStream(from: inputWasm)
-    let writer = InMemoryOutputWriter()
-    try transformer.transform(&inputStream, writer: writer)
+    var writer = InMemoryOutputWriter()
+    try transformer.transform(&inputStream, writer: &writer)
 
     let (url, handle) = makeTemporaryFile()
     handle.write(Data(writer.bytes()))
@@ -33,7 +33,7 @@ final class I64ImportTransformerTests: XCTestCase {
         Import[1]:
          - func[0] sig=1 <foo.bar> <- foo.bar
         """
-        XCTAssertTrue(output.contains(expectedImport))
+        XCTAssertContains(output, contains: expectedImport)
     }
 
     func testI64ImportCall() throws {

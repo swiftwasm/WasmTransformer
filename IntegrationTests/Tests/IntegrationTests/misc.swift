@@ -1,4 +1,3 @@
-import WasmTransformer
 import Foundation
 
 let buildPath = URL(fileURLWithPath: #filePath)
@@ -20,27 +19,8 @@ func makeTemporaryFile(suffix: String) -> (URL, FileHandle) {
     let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
     return (url, handle)
 }
-extension InputByteStream {
-    init(from url: URL) throws {
-        let bytes = try Array(Data(contentsOf: url))
-        self.init(bytes: bytes)
-    }
-}
 
-let binaryPath = buildPath.appendingPathComponent("main.wasm")
 let bundleJSPath = buildPath.appendingPathComponent("bundle.js")
-
-func lowerI64Imports(_ input: URL) throws -> URL {
-    let transformer = I64ImportTransformer()
-    var inputStream = try InputByteStream(from: binaryPath)
-    let writer = InMemoryOutputWriter()
-    try transformer.transform(&inputStream, writer: writer)
-
-    let (url, wasmFileHandle) = makeTemporaryFile(suffix: ".wasm")
-    wasmFileHandle.write(Data(writer.bytes()))
-    return url
-}
-
 func createCheckHtml(embedding binaryPath: URL) throws -> String {
     let wasmBytes = try Data(contentsOf: binaryPath)
     return try """
@@ -57,21 +37,12 @@ func createCheckHtml(embedding binaryPath: URL) throws -> String {
     """
 }
 
-let html = try createCheckHtml(embedding: lowerI64Imports(binaryPath))
-let (tmpHtmlURL, htmlFileHandle) = makeTemporaryFile(suffix: ".html")
-htmlFileHandle.write(html.data(using: .utf8)!)
+import WasmTransformer
 
+extension InputByteStream {
+    init(from url: URL) throws {
+        let bytes = try Array(Data(contentsOf: url))
+        self.init(bytes: bytes)
+    }
+}
 
-// Ensure that no exception happen
-import PythonKit
-
-let time = Python.import("time")
-let webdriver = Python.import("selenium.webdriver")
-
-let driver = webdriver.Safari()
-driver.set_page_load_timeout(120)
-driver.get(tmpHtmlURL.absoluteString)
-time.sleep(5)
-driver.execute_async_script("await window.startWasiTask(wasmBytes);arguments[0]();")
-time.sleep(5)
-driver.quit()

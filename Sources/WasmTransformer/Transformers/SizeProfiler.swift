@@ -1,7 +1,7 @@
 public extension InputByteStream {
     mutating func readSectionsInfo() throws -> [SectionInfo] {
         precondition(offset == bytes.startIndex)
-        readHeader()
+        _ = try readHeader()
 
         var result = [SectionInfo]()
         while !isEOF {

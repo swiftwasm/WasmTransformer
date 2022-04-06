@@ -83,6 +83,7 @@ jobs:
     runs-on: macos-12
     needs: build-fixtures
     strategy:
+      fail-fast: false
       matrix:
         toolchain-version:
           - swift-wasm-5.3.0-RELEASE

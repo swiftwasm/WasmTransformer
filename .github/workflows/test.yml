@@ -4,11 +4,19 @@ on: [push]
 jobs:
   build-fixtures:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        toolchain-version:
+          - swift-wasm-5.3.0-RELEASE
+          - swift-wasm-5.4.0-RELEASE
+          - swift-wasm-5.5.0-RELEASE
+          - swift-wasm-5.6.0-RELEASE
+
     steps:
       - uses: actions/checkout@v2
       - name: Install SwiftWasm toolchain
         run: |
-          VERSION=swift-wasm-5.3.0-RELEASE
+          VERSION=${{ matrix.toolchain-version }}
           TOOLCHAIN_URL="https://github.com/swiftwasm/swift/releases/download/$VERSION/$VERSION-macos_x86_64.pkg"
           wget $TOOLCHAIN_URL
           installer -target CurrentUserHomeDirectory -pkg $VERSION-macos_x86_64.pkg
@@ -21,17 +29,24 @@ jobs:
         working-directory: Fixtures
       - uses: actions/upload-artifact@v2
         with:
-          name: test-fixtures
+          name: test-fixtures-${{ matrix.toolchain-version }}
           path: Fixtures/build
 
   ubuntu-unit-tests:
     runs-on: ubuntu-latest
     needs: build-fixtures
+    strategy:
+      matrix:
+        toolchain-version:
+          - swift-wasm-5.3.0-RELEASE
+          - swift-wasm-5.4.0-RELEASE
+          - swift-wasm-5.5.0-RELEASE
+          - swift-wasm-5.6.0-RELEASE
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: test-fixtures
+          name: test-fixtures-${{ matrix.toolchain-version }}
           path: Fixtures/build
       - name: Install dependencies
         run: |
@@ -44,14 +59,21 @@ jobs:
   macos-unit-tests:
     runs-on: macos-latest
     needs: build-fixtures
+    strategy:
+      matrix:
+        toolchain-version:
+          - swift-wasm-5.3.0-RELEASE
+          - swift-wasm-5.4.0-RELEASE
+          - swift-wasm-5.5.0-RELEASE
+          - swift-wasm-5.6.0-RELEASE
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: test-fixtures
+          name: test-fixtures-${{ matrix.toolchain-version }}
           path: Fixtures/build
       - name: Select Xcode toolchain
-        run: sudo xcode-select -s /Applications/Xcode_12.2.0.app/Contents/Developer/
+        run: sudo xcode-select -s /Applications/Xcode_13.2.1.app/Contents/Developer/
       - name: Install dependencies
         run: brew install wabt
       - name: Run unit tests
@@ -60,14 +82,21 @@ jobs:
   integration-tests:
     runs-on: macos-latest
     needs: build-fixtures
+    strategy:
+      matrix:
+        toolchain-version:
+          - swift-wasm-5.3.0-RELEASE
+          - swift-wasm-5.4.0-RELEASE
+          - swift-wasm-5.5.0-RELEASE
+          - swift-wasm-5.6.0-RELEASE
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: test-fixtures
+          name: test-fixtures-${{ matrix.toolchain-version }}
           path: Fixtures/build
       - name: Select Xcode toolchain
-        run: sudo xcode-select -s /Applications/Xcode_12.2.0.app/Contents/Developer/
+        run: sudo xcode-select -s /Applications/Xcode_13.2.1.app/Contents/Developer/
       - name: Install dependencies
         run: |
           sudo pip3 install selenium

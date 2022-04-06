@@ -2,39 +2,12 @@
   "object": {
     "pins": [
       {
-        "package": "LoggerKit",
-        "repositoryURL": "https://github.com/pvieito/LoggerKit.git",
-        "state": {
-          "branch": "master",
-          "revision": "835b41248dbe474eb33dac2c1ef1376dea7dc11d",
-          "version": null
-        }
-      },
-      {
         "package": "PythonKit",
         "repositoryURL": "https://github.com/pvieito/PythonKit.git",
         "state": {
-          "branch": "b6513c3",
-          "revision": "b6513c3e60c1b3fcc3142827e717fc4a930a75f2",
+          "branch": null,
+          "revision": "8de2a3f1f8c1388e9fca84f192f96821d9ccd43d",
           "version": null
-        }
-      },
-      {
-        "package": "Rainbow",
-        "repositoryURL": "https://github.com/onevcat/Rainbow",
-        "state": {
-          "branch": null,
-          "revision": "626c3d4b6b55354b4af3aa309f998fae9b31a3d9",
-          "version": "3.2.0"
-        }
-      },
-      {
-        "package": "swift-argument-parser",
-        "repositoryURL": "https://github.com/apple/swift-argument-parser",
-        "state": {
-          "branch": null,
-          "revision": "223d62adc52d51669ae2ee19bdb8b7d9fd6fcd9c",
-          "version": "0.0.6"
         }
       }
     ]

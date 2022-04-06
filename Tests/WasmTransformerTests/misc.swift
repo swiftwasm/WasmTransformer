@@ -1,5 +1,19 @@
 import Foundation
 
+func findExecutable(_ name: String) -> String {
+    guard let pathsString = ProcessInfo.processInfo.environment["PATH"] else {
+        fatalError("PATH is not set in environment")
+    }
+    let paths = pathsString.split(separator: ":")
+    for path in paths {
+        let candidate = URL(fileURLWithPath: String(path)).appendingPathComponent(name)
+        if FileManager.default.isExecutableFile(atPath: candidate.path) {
+            return candidate.path
+        }
+    }
+    fatalError("Command '\(name)' not found in PATH")
+}
+
 @discardableResult
 func exec(_ launchPath: String, _ arguments: [String]) -> String? {
     let process = Process()
@@ -39,12 +53,12 @@ func createFile(_ content: String) -> URL {
 func compileWat(_ content: String, options: [String] = []) -> URL {
     let module = createFile(content)
     let (output, _) = makeTemporaryFile()
-    exec("/usr/local/bin/wat2wasm", [module.path, "-o", output.path] + options)
+    exec(findExecutable("wat2wasm"), [module.path, "-o", output.path] + options)
     return output
 }
 
 func wasmObjdump(_ input: URL, args: [String]) -> String {
-    exec("/usr/local/bin/wasm-objdump", [input.path] + args)!
+    exec(findExecutable("wasm-objdump"), [input.path] + args)!
 }
 
 

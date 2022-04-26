@@ -5,8 +5,8 @@ private func transformWat(_ input: String) throws -> URL {
     let inputWasm = compileWat(input, options: ["--debug-names"])
     let transformer = CustomSectionStripper()
     var inputStream = try InputByteStream(from: inputWasm)
-    let writer = InMemoryOutputWriter()
-    try transformer.transform(&inputStream, writer: writer)
+    var writer = InMemoryOutputWriter()
+    try transformer.transform(&inputStream, writer: &writer)
 
     let (url, handle) = makeTemporaryFile()
     handle.write(Data(writer.bytes()))

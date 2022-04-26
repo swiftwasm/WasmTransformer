@@ -1,4 +1,4 @@
-public struct I64ImportTransformer {
+public struct I64ImportTransformer: Transformer {
     enum Error: Swift.Error {
         case invalidExternalKind(UInt8)
         case expectFunctionSection
@@ -8,6 +8,11 @@ public struct I64ImportTransformer {
     typealias ImportFuncReplacement = (index: Int, toTypeIndex: Int)
     
     public init() {}
+
+    public static let metadata = TransformerMetadata(
+        name: "i64-to-i32-lowering",
+        description: "Replaces all i64 imports with i32 imports"
+    )
 
     public func transform<Writer: OutputWriter>(
         _ input: inout InputByteStream,

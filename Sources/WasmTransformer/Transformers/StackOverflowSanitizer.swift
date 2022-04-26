@@ -1,5 +1,5 @@
 
-public struct StackOverflowSanitizer {
+public struct StackOverflowSanitizer: Transformer {
     enum Error: Swift.Error {
         case expectFunctionSection
         case supportLibraryNotLinked
@@ -9,6 +9,11 @@ public struct StackOverflowSanitizer {
     }
 
     public init() {}
+
+    public static let metadata = TransformerMetadata(
+        name: "stack-sanitizer",
+        description: "Sanitize stack overflow assuming --stack-first and stack pointer is placed at globals[0]"
+    )
 
     public func transform<Writer: OutputWriter>(_ input: inout InputByteStream, writer: inout Writer) throws {
         let version = try input.readHeader()

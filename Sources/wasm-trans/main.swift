@@ -4,12 +4,9 @@ import Foundation
 
 struct TransformerOption: EnumerableFlag, CustomStringConvertible {
     let transformer: Transformer
-    var transformerType: Transformer.Type {
-        type(of: transformer)
-    }
 
     var description: String {
-        transformerType.metadata.name
+        transformer.metadata.name
     }
 
     static func name(for value: TransformerOption) -> NameSpecification {
@@ -17,7 +14,7 @@ struct TransformerOption: EnumerableFlag, CustomStringConvertible {
     }
 
     static func help(for value: TransformerOption) -> ArgumentHelp? {
-        ArgumentHelp(value.transformerType.metadata.description)
+        ArgumentHelp(value.transformer.metadata.description)
     }
 
     static var allCases: [TransformerOption] {

@@ -10,7 +10,7 @@ public struct StackOverflowSanitizer: Transformer {
 
     public init() {}
 
-    public static let metadata = TransformerMetadata(
+    public let metadata = TransformerMetadata(
         name: "stack-sanitizer",
         description: "Sanitize stack overflow assuming --stack-first and stack pointer is placed at globals[0]"
     )

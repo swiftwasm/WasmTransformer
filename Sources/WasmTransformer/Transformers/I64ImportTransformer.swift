@@ -9,7 +9,7 @@ public struct I64ImportTransformer: Transformer {
     
     public init() {}
 
-    public static let metadata = TransformerMetadata(
+    public let metadata = TransformerMetadata(
         name: "i64-to-i32-lowering",
         description: "Replaces all i64 imports with i32 imports"
     )

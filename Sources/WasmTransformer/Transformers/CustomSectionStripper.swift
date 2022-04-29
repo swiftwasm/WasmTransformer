@@ -3,7 +3,7 @@ public struct CustomSectionStripper: Transformer {
 
     public init() {}
 
-    public static let metadata = TransformerMetadata(
+    public let metadata = TransformerMetadata(
         name: "strip-custom-section", description: "Strips custom sections from the wasm module"
     )
 

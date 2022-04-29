@@ -4,7 +4,7 @@ public struct TransformerMetadata {
 }
 
 public protocol Transformer {
-    static var metadata: TransformerMetadata { get }
+    var metadata: TransformerMetadata { get }
     func transform<Writer: OutputWriter>(_ input: inout InputByteStream, writer: inout Writer) throws
 }
 

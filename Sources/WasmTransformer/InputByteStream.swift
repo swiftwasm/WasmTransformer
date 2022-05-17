@@ -83,19 +83,17 @@ public struct InputByteStream {
     }
 
     /// https://webassembly.github.io/spec/core/binary/types.html#result-types
-    mutating func readResultTypes() throws -> (types: [ValueType], hasI64: Bool) {
+    mutating func readResultTypes() throws -> [ValueType] {
         let count = readVarUInt32()
         var resultTypes: [ValueType] = []
-        var hasI64: Bool = false
         for _ in 0 ..< count {
             let rawType = readUInt8()
             guard let type = ValueType(rawValue: rawType) else {
                 throw Error.invalidValueType(rawType)
             }
-            hasI64 = hasI64 || (type == ValueType.i64)
             resultTypes.append(type)
         }
-        return (resultTypes, hasI64)
+        return resultTypes
     }
 
     mutating func readExternalKind() throws -> ExternalKind {
@@ -144,11 +142,10 @@ public struct InputByteStream {
 
     /// https://webassembly.github.io/spec/core/binary/types.html#value-types
     mutating func readFuncType() throws -> FuncSignature {
-        let (params, paramsHasI64) = try readResultTypes()
-        let (results, resultsHasI64) = try readResultTypes()
-        let hasI64 = paramsHasI64 || resultsHasI64
+        let params = try readResultTypes()
+        let results = try readResultTypes()
         return FuncSignature(
-            params: params, results: results, hasI64: hasI64
+            params: params, results: results
         )
     }
     /// https://webassembly.github.io/spec/core/binary/types.html#table-types

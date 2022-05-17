@@ -36,6 +36,27 @@ final class I64ImportTransformerTests: XCTestCase {
         XCTAssertContains(output, contains: expectedImport)
     }
 
+    func testI64ResultImport() throws {
+        let wat = """
+        (module
+            (import "foo" "bar" (func (result i64)))
+        )
+        """
+        let url = try transformWat(wat)
+        let output = wasmObjdump(url, args: ["--details"])
+        // No transformation happens since small to large cast is valid without BigInt support
+        let expectedTypes = """
+        Type[1]:
+         - type[0] () -> i64
+        """
+        XCTAssertTrue(output.contains(expectedTypes))
+        let expectedImport = """
+        Import[1]:
+         - func[0] sig=0 <foo.bar> <- foo.bar
+        """
+        XCTAssertContains(output, contains: expectedImport)
+    }
+
     func testI64ImportCall() throws {
         typealias TestCase = (
             line: UInt, wat: String, expectedTypes: String?, expectedImport: String?, expectedCode: String?

@@ -32,7 +32,7 @@ public struct StackOverflowSanitizer: Transformer {
                 let reader = TypeSectionReader(input: input)
                 assertSigIndex = reader.count
                 let assertSignature = FuncSignature(
-                    params: [.i32], results: [.i32], hasI64: false
+                    params: [.i32], results: [.i32]
                 )
                 try writer.writeVectorSection(
                     type: .type, reader: reader, extras: [assertSignature]

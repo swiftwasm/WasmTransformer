@@ -87,17 +87,4 @@ enum Opcode: Equatable {
 public struct FuncSignature {
     public let params: [ValueType]
     public let results: [ValueType]
-    let hasI64: Bool
-
-    func lowered() -> FuncSignature {
-        func transform(_ type: ValueType) -> ValueType {
-            if case .i64 = type { return .i32 }
-            else { return type }
-        }
-        return FuncSignature(
-            params: params.map(transform),
-            results: results.map(transform),
-            hasI64: false
-        )
-    }
 }

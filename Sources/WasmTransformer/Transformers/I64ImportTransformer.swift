@@ -137,7 +137,7 @@ public struct I64ImportTransformer: Transformer {
                 let signatureIndex = Int(sigIndex)
                 let signature = typeSection[signatureIndex]
                 defer { importFuncCount += 1 }
-                guard signature.hasI64 else { continue }
+                guard signature.hasI64Param() else { continue }
                 let toTypeIndex = typeSection.count
                 let toSignature = signature.lowered()
                 typeSection.append(toSignature)
@@ -228,5 +228,27 @@ private func transformElemSection<Writer: OutputWriter>(
                 }
             }
         }
+    }
+}
+
+fileprivate extension FuncSignature {
+    func lowered() -> FuncSignature {
+        func transform(_ type: ValueType) -> ValueType {
+            if case .i64 = type { return .i32 }
+            else { return type }
+        }
+        return FuncSignature(
+            params: params.map(transform),
+            results: results
+        )
+    }
+
+    func hasI64Param() -> Bool {
+        for param in params {
+            if param == ValueType.i64 {
+                return true
+            }
+        }
+        return false
     }
 }

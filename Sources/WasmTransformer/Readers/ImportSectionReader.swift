@@ -1,7 +1,7 @@
 public struct Import {
-    var module: String
-    var field: String
-    var descriptor: ImportDescriptor
+    public var module: String
+    public var field: String
+    public var descriptor: ImportDescriptor
 }
 
 public enum ImportDescriptor {

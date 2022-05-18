@@ -6,8 +6,12 @@ public struct I64ImportTransformer: Transformer {
     }
 
     typealias ImportFuncReplacement = (index: Int, toTypeIndex: Int)
-    
-    public init() {}
+
+    private let shouldLower: (Import) -> Bool
+
+    public init(shouldLower: @escaping (Import) -> Bool = { _ in true }) {
+        self.shouldLower = shouldLower
+    }
 
     public let metadata = TransformerMetadata(
         name: "i64-to-i32-lowering",
@@ -137,7 +141,7 @@ public struct I64ImportTransformer: Transformer {
                 let signatureIndex = Int(sigIndex)
                 let signature = typeSection[signatureIndex]
                 defer { importFuncCount += 1 }
-                guard signature.hasI64Param() else { continue }
+                guard signature.hasI64Param(), shouldLower(entry) else { continue }
                 let toTypeIndex = typeSection.count
                 let toSignature = signature.lowered()
                 typeSection.append(toSignature)

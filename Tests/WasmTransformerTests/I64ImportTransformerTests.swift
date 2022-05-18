@@ -1,9 +1,9 @@
 @testable import WasmTransformer
 import XCTest
 
-private func transformWat(_ input: String) throws -> URL {
+private func transformWat(_ input: String, shouldLower: @escaping (Import) -> Bool = { _ in true }) throws -> URL {
     let inputWasm = compileWat(input)
-    let transformer = I64ImportTransformer()
+    let transformer = I64ImportTransformer(shouldLower: shouldLower)
     var inputStream = try InputByteStream(from: inputWasm)
     var writer = InMemoryOutputWriter()
     try transformer.transform(&inputStream, writer: &writer)
@@ -53,6 +53,29 @@ final class I64ImportTransformerTests: XCTestCase {
         let expectedImport = """
         Import[1]:
          - func[0] sig=0 <foo.bar> <- foo.bar
+        """
+        XCTAssertContains(output, contains: expectedImport)
+    }
+
+    func testSelectLoweringImport() throws {
+        let wat = """
+        (module
+            (import "foo" "bar" (func (param i64)))
+            (import "fizz" "bar" (func (param i64)))
+        )
+        """
+        let url = try transformWat(wat) { $0.module == "fizz" }
+        let output = wasmObjdump(url, args: ["--details"])
+        let expectedTypes = """
+        Type[2]:
+         - type[0] (i64) -> nil
+         - type[1] (i32) -> nil
+        """
+        XCTAssertTrue(output.contains(expectedTypes))
+        let expectedImport = """
+        Import[2]:
+         - func[0] sig=0 <foo.bar> <- foo.bar
+         - func[1] sig=1 <fizz.bar> <- fizz.bar
         """
         XCTAssertContains(output, contains: expectedImport)
     }

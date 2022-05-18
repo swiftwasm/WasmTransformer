@@ -1,10 +1,10 @@
-struct Import {
+public struct Import {
     var module: String
     var field: String
     var descriptor: ImportDescriptor
 }
 
-enum ImportDescriptor {
+public enum ImportDescriptor {
     case function(UInt32)
     case table(rawBytes:  ArraySlice<UInt8>)
     case memory(rawBytes: ArraySlice<UInt8>)

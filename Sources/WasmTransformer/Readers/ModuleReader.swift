@@ -1,4 +1,4 @@
-enum ModuleSection {
+public enum ModuleSection {
     case type(TypeSectionReader)
     case `import`(ImportSectionReader)
     case function(FunctionSectionReader)
@@ -7,9 +7,9 @@ enum ModuleSection {
     case rawSection(type: SectionType, content: ArraySlice<UInt8>)
 }
 
-struct ModuleReader {
+public struct ModuleReader {
     enum Error: Swift.Error {
-        case invlaidMagic
+        case invalidMagic
     }
     var input: InputByteStream
     var isEOF: Bool { input.isEOF }
@@ -29,7 +29,7 @@ struct ModuleReader {
             return .import(ImportSectionReader(input: input))
         case .function:
             return .function(FunctionSectionReader(input: input))
-        case .elem:
+        case .element:
             return .element(ElementSectionReader(input: input))
         case .code:
             return .code(CodeSectionReader(input: input))

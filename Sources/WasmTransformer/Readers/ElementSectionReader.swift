@@ -17,7 +17,7 @@ struct ElementItemsReader {
     }
 }
 
-struct ElementSectionReader: VectorSectionReader {
+public struct ElementSectionReader: VectorSectionReader {
     var input: InputByteStream
     let count: UInt32
 

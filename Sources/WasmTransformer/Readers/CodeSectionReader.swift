@@ -27,7 +27,7 @@ struct LocalsReader {
 }
 
 
-struct CodeSectionReader: VectorSectionReader {
+public struct CodeSectionReader: VectorSectionReader {
     var input: InputByteStream
     let count: UInt32
 

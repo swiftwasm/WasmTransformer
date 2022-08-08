@@ -2,7 +2,7 @@ struct SignatureIndex: Equatable {
     let value: UInt32
 }
 
-struct FunctionSectionReader: VectorSectionReader {
+public struct FunctionSectionReader: VectorSectionReader {
     var input: InputByteStream
     let count: UInt32
 

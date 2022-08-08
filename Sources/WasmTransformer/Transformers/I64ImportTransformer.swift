@@ -51,7 +51,7 @@ public struct I64ImportTransformer: Transformer {
                 case .rawSection(type: .custom, content: let content):
                     copyingSections.append((type: .custom, content: content))
                 case .element:
-                    throw Error.unexpectedSection(SectionType.elem.rawValue)
+                    throw Error.unexpectedSection(SectionType.element.rawValue)
                 case .function(_):
                     throw Error.unexpectedSection(SectionType.function.rawValue)
                 case .code(_):
@@ -217,7 +217,7 @@ private func transformElemSection<Writer: OutputWriter>(
     input: inout ElementSectionReader, writer: inout Writer,
     trampolines: Trampolines, originalFuncCount: Int
 ) throws {
-    try writer.writeVectorSection(type: .elem, count: input.count) { writer in
+    try writer.writeVectorSection(type: .element, count: input.count) { writer in
         for result in input {
             var entry = try result.get()
             try writer.writeBytes(encodeULEB128(entry.flags))

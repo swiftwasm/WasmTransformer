@@ -11,7 +11,7 @@ public enum ImportDescriptor {
     case global(rawBytes: ArraySlice<UInt8>)
 }
 
-struct ImportSectionReader: VectorSectionReader {
+public struct ImportSectionReader: VectorSectionReader {
     var input: InputByteStream
     let count: UInt32
 

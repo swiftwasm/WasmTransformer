@@ -27,11 +27,11 @@ struct VectorSectionIterator<Reader: VectorSectionReader>: IteratorProtocol {
 }
 
 extension VectorSectionReader {
-    __consuming func makeIterator() -> VectorSectionIterator<Self> {
+    __consuming public func makeIterator() -> VectorSectionIterator<Self> {
         VectorSectionIterator(reader: self, count: count)
     }
 
-    func collect() throws -> [Item] {
+    public func collect() throws -> [Item] {
         var items: [Item] = []
         items.reserveCapacity(Int(count))
         for result in self {

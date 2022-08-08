@@ -1,4 +1,4 @@
-struct TypeSectionReader: VectorSectionReader {
+public struct TypeSectionReader: VectorSectionReader {
     enum Error: Swift.Error {
         case unsupportedTypeDefKind(UInt8)
     }

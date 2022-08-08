@@ -14,7 +14,7 @@ public enum SectionType: UInt8 {
     case global = 6
     case export = 7
     case start = 8
-    case elem = 9
+    case element = 9
     case code = 10
     case data = 11
     case dataCount = 12

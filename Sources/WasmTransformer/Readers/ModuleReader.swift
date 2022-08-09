@@ -17,12 +17,13 @@ public struct ModuleReader {
         self.input = input
     }
     
-    var isEOF: Bool { input.isEOF }
+    public var isEOF: Bool { input.isEOF }
 
     mutating func readHeader() throws -> ArraySlice<UInt8> {
         return try input.readHeader()
     }
-    mutating func readSection() throws -> ModuleSection {
+
+    public mutating func readSection() throws -> ModuleSection {
         let sectionInfo = try input.readSectionInfo()
         defer {
             input.seek(sectionInfo.endOffset)

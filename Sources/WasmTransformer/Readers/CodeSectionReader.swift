@@ -1,4 +1,4 @@
-struct FunctionBody {
+public struct FunctionBody {
     var input: InputByteStream
     let size: UInt32
     let endOffset: Int
@@ -26,17 +26,16 @@ struct LocalsReader {
     }
 }
 
-
 public struct CodeSectionReader: VectorSectionReader {
     var input: InputByteStream
-    let count: UInt32
+    public let count: UInt32
 
     init(input: InputByteStream) {
         self.input = input
         self.count = self.input.readVarUInt32()
     }
 
-    mutating func read() throws -> FunctionBody {
+    public mutating func read() throws -> FunctionBody {
         let size = input.readVarUInt32()
         let body = FunctionBody(input: input, size: size,
                                 endOffset: input.offset + Int(size))

@@ -1,4 +1,4 @@
-struct ElementSegment {
+public struct ElementSegment {
     let flags: UInt32
     let initExpr: ArraySlice<UInt8>
     var items: ElementItemsReader
@@ -19,14 +19,14 @@ struct ElementItemsReader {
 
 public struct ElementSectionReader: VectorSectionReader {
     var input: InputByteStream
-    let count: UInt32
+    public let count: UInt32
 
     init(input: InputByteStream) {
         self.input = input
         self.count = self.input.readVarUInt32()
     }
 
-    mutating func read() throws -> ElementSegment {
+    public mutating func read() throws -> ElementSegment {
         let flags = input.readVarUInt32()
         let initExpr = try input.consumeI32InitExpr()
         let count = input.readVarUInt32()

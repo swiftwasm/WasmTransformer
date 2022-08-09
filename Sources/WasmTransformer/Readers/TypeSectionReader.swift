@@ -4,14 +4,14 @@ public struct TypeSectionReader: VectorSectionReader {
     }
 
     var input: InputByteStream
-    let count: UInt32
+    public let count: UInt32
 
     init(input: InputByteStream) {
         self.input = input
-        self.count = self.input.readVarUInt32()
+        count = self.input.readVarUInt32()
     }
 
-    mutating func read() throws -> FuncSignature {
+    public mutating func read() throws -> FuncSignature {
         let rawKind = input.readUInt8()
         switch rawKind {
         case 0x60:

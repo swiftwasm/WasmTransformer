@@ -1,4 +1,4 @@
-protocol VectorSectionReader: Sequence where Element == Result<Item, Error> {
+public protocol VectorSectionReader: Sequence where Element == Result<Item, Error> {
     associatedtype Item
     var count: UInt32 { get }
     mutating func read() throws -> Item

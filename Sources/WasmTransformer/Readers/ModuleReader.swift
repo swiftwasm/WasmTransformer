@@ -12,6 +12,11 @@ public struct ModuleReader {
         case invalidMagic
     }
     var input: InputByteStream
+    
+    public init(input: InputByteStream) {
+        self.input = input
+    }
+    
     var isEOF: Bool { input.isEOF }
 
     mutating func readHeader() throws -> ArraySlice<UInt8> {

@@ -1,5 +1,5 @@
 public struct SignatureIndex: Equatable {
-    let value: UInt32
+    public let value: UInt32
 }
 
 public struct FunctionSectionReader: VectorSectionReader {

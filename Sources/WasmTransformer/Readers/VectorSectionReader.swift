@@ -4,7 +4,7 @@ public protocol VectorSectionReader: Sequence where Element == Result<Item, Erro
     mutating func read() throws -> Item
 }
 
-struct VectorSectionIterator<Reader: VectorSectionReader>: IteratorProtocol {
+public struct VectorSectionIterator<Reader: VectorSectionReader>: IteratorProtocol {
     private(set) var reader: Reader
     private(set) var left: UInt32
     init(reader: Reader, count: UInt32) {
@@ -12,7 +12,7 @@ struct VectorSectionIterator<Reader: VectorSectionReader>: IteratorProtocol {
         self.left = count
     }
     private var end: Bool = false
-    mutating func next() -> Reader.Element? {
+    public mutating func next() -> Reader.Element? {
         guard !end else { return nil }
         guard left != 0 else { return nil }
         let result = Result(catching: { try reader.read() })

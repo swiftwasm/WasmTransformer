@@ -13,14 +13,14 @@ public enum ImportDescriptor {
 
 public struct ImportSectionReader: VectorSectionReader {
     var input: InputByteStream
-    let count: UInt32
+    public let count: UInt32
 
     init(input: InputByteStream) {
         self.input = input
         self.count = self.input.readVarUInt32()
     }
 
-    mutating func read() throws -> Import {
+    public mutating func read() throws -> Import {
         try input.readImport()
     }
 }

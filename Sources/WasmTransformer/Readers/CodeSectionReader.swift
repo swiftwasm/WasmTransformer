@@ -1,7 +1,7 @@
 public struct FunctionBody {
-    var input: InputByteStream
-    let size: UInt32
-    let endOffset: Int
+    public internal(set) var input: InputByteStream
+    public let size: UInt32
+    public let endOffset: Int
 
     func locals() -> LocalsReader {
         LocalsReader(input: input)

@@ -26,7 +26,7 @@ public struct VectorSectionIterator<Reader: VectorSectionReader>: IteratorProtoc
     }
 }
 
-extension VectorSectionReader {
+extension VectorSectionReader where Iterator == VectorSectionIterator<Self> {
     __consuming public func makeIterator() -> VectorSectionIterator<Self> {
         VectorSectionIterator(reader: self, count: count)
     }

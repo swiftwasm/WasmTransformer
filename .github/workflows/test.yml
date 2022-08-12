@@ -57,15 +57,17 @@ jobs:
         run: swift test --enable-test-discovery
 
   macos-unit-tests:
-    runs-on: macos-latest
+    runs-on: macos-12
     needs: build-fixtures
     strategy:
       matrix:
+        xcode: ["Xcode_14.0", "Xcode_13.4.1", "Xcode_13.2.1"]
         toolchain-version:
           - swift-wasm-5.3.0-RELEASE
           - swift-wasm-5.4.0-RELEASE
           - swift-wasm-5.5.0-RELEASE
           - swift-wasm-5.6.0-RELEASE
+
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
@@ -73,7 +75,7 @@ jobs:
           name: test-fixtures-${{ matrix.toolchain-version }}
           path: Fixtures/build
       - name: Select Xcode toolchain
-        run: sudo xcode-select -s /Applications/Xcode_13.2.1.app/Contents/Developer/
+        run: sudo xcode-select -s /Applications/${{ matrix.xcode }}.app/Contents/Developer
       - name: Install dependencies
         run: brew install wabt
       - name: Run unit tests
